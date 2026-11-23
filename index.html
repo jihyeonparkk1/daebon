@@ -1,0 +1,1865 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>대본 연습실</title>
+<meta name="description" content="연극 대본을 올리면 막·장을 나누고 작품과 인물을 분석해, 내 대사를 가려 외우게 돕는 연습 앱">
+<meta name="theme-color" content="#1E5A86">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="대본 연습실">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@400;700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: one narrow column like a rehearsal binder; my lines carry a highlighter stripe, key words a darker marker; stage beats 기·승·전·결 get their own four hues. */
+:root{
+  --bg:#F2F4F6; --surface:#FFFFFF; --fg:#1B2027; --muted:#5B6470; --line:#DADFE5;
+  --accent:#1E5A86; --accent-fg:#FFFFFF; --accent-soft:rgba(30,90,134,.10);
+  --hl:rgba(255,212,0,.26); --key:rgba(255,184,0,.55); --ok:#1F7A4D; --ng:#B3402F; --blank:#AEB6C0;
+  --gi:#3D7A5A; --seung:#2F6699; --jeon:#B0542E; --gyeol:#6A4C93;
+  --font-ui:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-script:"Gowun Batang","Noto Serif KR","Batang",serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121519; --surface:#1B1F25; --fg:#E6E9EE; --muted:#9AA3AF; --line:#2D333B;
+  --accent:#7DB8E8; --accent-fg:#0E1A24; --accent-soft:rgba(125,184,232,.14);
+  --hl:rgba(232,197,71,.13); --key:rgba(232,197,71,.42); --ok:#5CC28C; --ng:#E77B68; --blank:#4E5661;
+  --gi:#6CC195; --seung:#7AAEE0; --jeon:#E8956E; --gyeol:#B59BE0; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#121519; --surface:#1B1F25; --fg:#E6E9EE; --muted:#9AA3AF; --line:#2D333B;
+  --accent:#7DB8E8; --accent-fg:#0E1A24; --accent-soft:rgba(125,184,232,.14);
+  --hl:rgba(232,197,71,.13); --key:rgba(232,197,71,.42); --ok:#5CC28C; --ng:#E77B68; --blank:#4E5661;
+  --gi:#6CC195; --seung:#7AAEE0; --jeon:#E8956E; --gyeol:#B59BE0; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-ui);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 56px}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+h1,h2,h3{margin:0;text-wrap:balance;line-height:1.3}
+h1{font-size:22px} h2{font-size:18px} h3{font-size:15px}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:13px}
+.label{font-size:12px;letter-spacing:.06em;color:var(--muted);font-weight:500}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;min-height:42px;font-weight:500}
+button:hover{border-color:var(--accent)}
+button:focus-visible,select:focus-visible,input:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+button.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+button.ghost:hover{color:var(--fg)}
+button.ok{background:var(--ok);border-color:var(--ok);color:#fff}
+button.ng{background:transparent;border-color:var(--ng);color:var(--ng)}
+button:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row.between{justify-content:space-between}
+.grow{flex:1;min-width:0}
+input[type=text],input[type=number],textarea,select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%}
+input[type=number]{width:84px}
+textarea{min-height:220px;resize:vertical;font-family:var(--font-script);font-size:15px;line-height:1.7}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.top{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.brand{font-family:var(--font-script);font-weight:700;font-size:22px}
+.tabs{display:flex;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px;overflow-x:auto}
+.tabs button{flex:1;border:0;min-height:38px;border-radius:9px;background:transparent;color:var(--muted);padding:6px 8px;white-space:nowrap}
+.tabs button[aria-selected="true"]{background:var(--accent-soft);color:var(--fg);font-weight:700}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13px;background:var(--surface);cursor:pointer;min-height:34px}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+.tag{display:inline-block;font-size:11px;letter-spacing:.04em;border-radius:6px;padding:2px 7px;background:var(--accent-soft);color:var(--accent);font-weight:700;white-space:nowrap}
+.tag.ok{background:transparent;border:1px solid var(--ok);color:var(--ok)}
+.tag.ng{background:transparent;border:1px solid var(--ng);color:var(--ng)}
+.tag.plain{background:transparent;border:1px solid var(--line);color:var(--muted)}
+.st{display:inline-grid;place-items:center;width:1.7em;height:1.7em;border-radius:50%;font-family:var(--font-script);font-weight:700;font-size:13px;color:#fff;flex:none}
+.st-기{background:var(--gi)} .st-승{background:var(--seung)} .st-전{background:var(--jeon)} .st-결{background:var(--gyeol)}
+.notice{border:1px dashed var(--line);border-radius:12px;padding:12px 14px;font-size:13px;color:var(--muted)}
+.notice.warn{border-color:var(--ng);color:var(--ng)}
+.job{display:flex;align-items:center;gap:10px;border:1px solid var(--accent);background:var(--accent-soft);border-radius:12px;padding:10px 14px;font-size:13.5px}
+/* library */
+.cards{display:flex;flex-direction:column;gap:10px}
+.card{display:flex;gap:12px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;cursor:pointer;text-align:left;width:100%}
+.card:hover{border-color:var(--accent)}
+.card .meta{font-size:13px;color:var(--muted)}
+.hero{background:var(--surface);border:1px solid var(--accent);border-radius:16px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.hero .big{font-family:var(--font-script);font-size:22px;font-weight:700}
+.meter{height:6px;border-radius:99px;background:var(--line);overflow:hidden;width:100%}
+.meter > i{display:block;height:100%;background:var(--ok);border-radius:99px}
+.pct{font-variant-numeric:tabular-nums;font-weight:700;font-size:20px;min-width:52px;text-align:right}
+.drop{border:2px dashed var(--line);border-radius:16px;padding:28px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center;cursor:pointer;background:var(--surface)}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop .big{font-size:17px;font-weight:700}
+details summary{cursor:pointer;color:var(--muted);font-size:14px;padding:4px 0}
+/* script */
+.script{display:flex;flex-direction:column;gap:2px;font-family:var(--font-script);font-size:16.5px;line-height:1.75}
+.ln{display:grid;grid-template-columns:5.2em 1fr;gap:10px;padding:6px 8px;border-radius:8px;scroll-margin-top:80px}
+.ln .who{font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--muted);padding-top:3px;overflow-wrap:anywhere}
+.ln .say{min-width:0;overflow-wrap:anywhere}
+.ln.mine{background:var(--hl)}
+.ln.mine .who{color:var(--fg)}
+.ln.flash{outline:2px solid var(--accent)}
+.ln.dir{grid-template-columns:1fr;color:var(--muted);font-size:15px;padding-left:calc(5.2em + 18px)}
+.sechead{display:flex;flex-direction:column;gap:4px;padding:18px 8px 8px;border-top:1px solid var(--line);margin-top:8px;font-family:var(--font-ui);scroll-margin-top:80px}
+.sechead:first-child{border-top:0;margin-top:0;padding-top:4px}
+.sechead .t{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px}
+.sechead .ev{font-size:13px;color:var(--muted)}
+.acthead{font-family:var(--font-script);font-weight:700;font-size:20px;padding:20px 8px 0}
+.inline-dir{color:var(--muted);font-size:.9em}
+mark.key{background:linear-gradient(transparent 52%,var(--key) 52%);color:inherit;font-weight:700;padding:0 1px}
+.h{display:inline-block;width:.82em;height:1.05em;vertical-align:-.15em;border-bottom:2px solid var(--blank);margin:0 .5px}
+.tools{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px;font-family:var(--font-ui)}
+.tools button{min-height:32px;padding:4px 10px;font-size:12.5px;border-radius:8px}
+.story{font-family:var(--font-ui);font-size:13.5px;line-height:1.6;background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:8px;padding:8px 10px;margin-top:6px}
+.story b{color:var(--accent)}
+.toggles{display:flex;gap:6px;flex-wrap:wrap}
+/* analysis */
+.arc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.arc > div{border:1px solid var(--line);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:6px;min-width:0;font-size:13.5px}
+.arc .scenes{display:flex;flex-wrap:wrap;gap:4px}
+.arc .scenes button{min-height:28px;padding:2px 8px;font-size:12px;border-radius:7px}
+@media (max-width:600px){.arc{grid-template-columns:repeat(2,minmax(0,1fr))}.ln{grid-template-columns:4.2em 1fr}.ln.dir{padding-left:calc(4.2em + 18px)}}
+.dl{display:grid;grid-template-columns:5.5em 1fr;gap:6px 12px;font-size:14px}
+.dl dt{color:var(--muted);font-weight:500;font-size:13px} .dl dd{margin:0;min-width:0}
+.sclist{display:flex;flex-direction:column}
+.sc{display:grid;grid-template-columns:auto 3.2em 1fr;gap:10px;align-items:start;padding:10px 0;border-bottom:1px solid var(--line);text-align:left;background:none;border-left:0;border-right:0;border-top:0;border-radius:0;min-height:0}
+.sc:hover{background:var(--accent-soft)}
+.sc .no{font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted);padding-top:2px}
+.sc .tt{font-weight:700;font-size:14px} .sc .ev{font-size:13px;color:var(--muted)}
+.map{width:100%;max-width:560px;margin:0 auto;display:block}
+.map text{fill:var(--fg);font-family:var(--font-ui)}
+.map .edge{stroke:var(--line);stroke-width:2;cursor:pointer}
+.map .edge.sel{stroke:var(--accent);stroke-width:3}
+.map .elab{font-size:11px;fill:var(--muted)}
+.map .elabbg{fill:var(--bg)}
+.map .node circle{fill:var(--surface);stroke:var(--accent);stroke-width:2}
+.map .node.me circle{fill:var(--accent)} .map .node.me text{fill:var(--accent-fg)}
+.map .node{cursor:pointer}
+.rel{display:flex;flex-direction:column;gap:4px;padding:10px 0;border-bottom:1px solid var(--line)}
+.rel .pair{font-weight:700;font-size:14px}
+.quote{font-family:var(--font-script);font-size:14px;border-left:3px solid var(--line);padding:2px 10px;color:var(--fg);cursor:pointer;background:none;border-top:0;border-right:0;border-bottom:0;border-radius:0;text-align:left;min-height:0}
+.quote:hover{border-left-color:var(--accent)}
+.quote .src{display:block;font-family:var(--font-ui);font-size:11.5px;color:var(--muted)}
+.curve{width:100%;display:block}
+.curve text{fill:var(--muted);font-family:var(--font-ui);font-size:12px}
+.curve .zero{stroke:var(--line);stroke-dasharray:4 4}
+.curve .grid{stroke:var(--line);stroke-width:.5}
+.curve .ln2{fill:none;stroke:var(--accent);stroke-width:2.5}
+.curve .area{fill:var(--accent-soft)}
+.curve circle{fill:var(--surface);stroke:var(--accent);stroke-width:2;cursor:pointer}
+.beats{display:flex;flex-direction:column;gap:6px}
+.beat{display:grid;grid-template-columns:auto 3.2em 1fr;gap:10px;align-items:start;font-size:13.5px}
+.beat .no{font-variant-numeric:tabular-nums;color:var(--muted);font-size:12.5px;padding-top:2px}
+ul.pts{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px;font-size:14px}
+/* run */
+.stage{display:flex;flex-direction:column;gap:12px}
+.ctx{font-family:var(--font-script);font-size:15px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+.ctx .who{font-family:var(--font-ui);font-weight:700;font-size:12px;margin-right:6px}
+.cue{font-family:var(--font-script);font-size:20px;line-height:1.7;min-height:3em}
+.cue .who{display:block;font-family:var(--font-ui);font-size:13px;font-weight:700;color:var(--muted);margin-bottom:4px}
+.cue.mine{background:var(--hl);border-radius:12px;padding:12px 14px}
+.where{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);flex-wrap:wrap}
+.counter{font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted)}
+.bigbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.bigbtns button{min-height:52px;font-size:16px}
+.heard{font-family:var(--font-script);font-size:15px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.heard .miss{color:var(--ng);font-weight:700}
+.score{font-variant-numeric:tabular-nums;font-weight:700}
+.range{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.range input{width:120px}
+/* progress */
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.stat{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--surface)}
+.stat b{display:block;font-size:24px;font-variant-numeric:tabular-nums}
+.plist{display:flex;flex-direction:column}
+.pitem{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;border-bottom:1px solid var(--line);padding:8px 0}
+.pitem .txt{font-family:var(--font-script);min-width:0;overflow-wrap:anywhere}
+.pitem .cnt{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap;text-align:right}
+.dot{width:10px;height:10px;border-radius:50%;margin-top:8px;background:var(--line)}
+.dot.ok{background:var(--ok)} .dot.ng{background:var(--ng)} .dot.mid{background:var(--key)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;max-width:calc(100% - 32px);z-index:20}
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid var(--line);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;vertical-align:-2px;flex:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spinner{animation:none}}
+.confirm{border:1px solid var(--ng);border-radius:12px;padding:12px;display:flex;flex-direction:column;gap:8px}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+/* manual AI (copy question → paste answer) sheet */
+.sheet{position:fixed;inset:0;z-index:30;background:rgba(10,14,20,.45);display:flex;align-items:flex-end;justify-content:center}
+.sheet > .box{background:var(--bg);width:100%;max-width:760px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;
+  padding:16px max(16px,env(safe-area-inset-left,0px)) calc(16px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:12px}
+.sheet textarea{min-height:140px;font-family:var(--font-ui);font-size:13px}
+.steps{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;font-size:14px}
+a.btnlink{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 14px;min-height:42px;font-weight:500;color:var(--fg);text-decoration:none}
+a.btnlink:hover{border-color:var(--accent)}
+.recording{border-color:var(--ng)!important;color:var(--ng)!important}
+.notice button.ghost{min-height:0;padding:0 2px;color:var(--accent);text-decoration:underline;font:inherit}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app"></div>
+<div class="sheet" id="manualSheet" hidden></div>
+<input type="file" id="recInput" accept="audio/*" capture="user" hidden>
+<input type="file" id="backupInput" accept="application/json,.json" hidden>
+<input type="file" id="pdfInput" accept="application/pdf,.pdf,.hwp,.hwpx,application/x-hwp,application/haansofthwp,application/vnd.hancom.hwp,application/vnd.hancom.hwpx" hidden>
+<div class="toast" id="toast" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/cfb@1.2.2/dist/cfb.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pako/2.1.0/pako.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+/* =========================================================
+   Example play (written for this app, clearly marked 예시)
+   ========================================================= */
+const EX_LINES=[
+  {k:"act",r:"",t:"1막"},
+  {k:"scene",r:"",t:"1장 · 민호의 자취방, 밤"},
+  {k:"dir",r:"",t:"(수진, 문 앞에 서 있다. 손에 카메라 가방.)"},
+  {k:"line",r:"민호",t:"이 시간에 웬일이야?"},
+  {k:"line",r:"수진",t:"이거 돌려주러 왔어. 네 카메라."},
+  {k:"line",r:"민호",t:"굳이 지금? 내일 학교에서 줘도 되잖아."},
+  {k:"line",r:"수진",t:"내일까지 들고 있으면 또 핑계 생길 것 같아서."},
+  {k:"line",r:"민호",t:"(가방을 받으며) 핑계라니. 무슨 핑계."},
+  {k:"line",r:"수진",t:"너한테 연락할 핑계. 그만하자고 한 건 나니까, 내가 먼저 끊어야지."},
+  {k:"line",r:"민호",t:"...사진은? 그 안에 바다 사진들."},
+  {k:"line",r:"수진",t:"다 지웠어. 아니, 지우려고 했는데 못 지웠어. 그래서 그냥 가져왔어."},
+  {k:"line",r:"민호",t:"그럼 같이 보자. 마지막으로 한 번만."},
+  {k:"line",r:"수진",t:"(잠시 망설이다) 딱 한 장만이야."},
+  {k:"scene",r:"",t:"2장 · 사진동아리 방, 다음 날 아침"},
+  {k:"dir",r:"",t:"(수진, 혼자 인화된 사진 한 장을 보고 있다. 지우가 들어온다.)"},
+  {k:"line",r:"지우",t:"어? 그 사진 뭐야? 바다네."},
+  {k:"line",r:"수진",t:"아무것도 아니야. 동아리 전시에 낼까 해서."},
+  {k:"line",r:"지우",t:"민호 선배가 찍은 거 아니야? 선배 카메라 화각이잖아."},
+  {k:"line",r:"수진",t:"(사진을 뒤집으며) 누가 찍었는지가 뭐가 중요해. 잘 나왔으면 됐지."},
+  {k:"line",r:"지우",t:"전시 제목은 정했어?"},
+  {k:"line",r:"수진",t:"응. '한 장만'."}
+];
+const exI=snip=>EX_LINES.findIndex(l=>l.t.includes(snip));
+const EXAMPLE={
+  id:"__example", example:true, title:"예시 · 한 장만", myRole:"수진", updatedAt:0, prog:{}, aiSections:null,
+  lines:EX_LINES,
+  notes:{role:"수진", map:{
+    [exI("돌려주러")]:{keys:["돌려주러","카메라"],story:"민호가 '웬일이야'라고 묻자 용건부터 꺼낸다. 오래 머물 생각이 없으니 첫마디가 '돌려주러'다."},
+    [exI("내일까지")]:{keys:["내일까지","핑계"],story:"'내일 줘도 되잖아'에 대한 답이다. 시간을 끌면 다시 만날 이유가 생긴다는 걱정이 '핑계'라는 단어로 처음 나온다."},
+    [exI("연락할 핑계")]:{keys:["연락할 핑계","그만하자고","먼저 끊어야지"],story:"민호가 '무슨 핑계'냐고 되묻자 앞에서 던진 '핑계'의 정체를 밝힌다. 이별을 말한 게 나니까 끝맺음도 내 몫이라는 논리로 이어진다."},
+    [exI("다 지웠어")]:{keys:["다 지웠어","못 지웠어","가져왔어"],story:"'바다 사진'을 묻자 처음엔 세게 '다 지웠어'라고 했다가 곧 고쳐 말한다. 지웠다 → 못 지웠다 → 그래서 가져왔다, 세 계단으로 기억하자."},
+    [exI("딱 한 장만")]:{keys:["딱 한 장만"],story:"'마지막으로 한 번만'이라는 제안을 조건을 붙여 받아들인다. 상대의 '한 번만'을 '한 장만'으로 받아친다."},
+    [exI("아무것도 아니야")]:{keys:["아무것도 아니야","전시"],story:"지우가 사진을 알아보자 감추려 한다. 1장에서 가져온 바로 그 사진이라 '아무것도 아니야'로 막고, 둘러댈 이유로 '전시'를 꺼낸다."},
+    [exI("누가 찍었는지")]:{keys:["누가 찍었는지","잘 나왔으면"],story:"'민호 선배가 찍은 거'라는 말에 사진을 뒤집는다. 사람이 아니라 사진만 남기겠다는 결심이 '누가 찍었는지가 뭐가 중요해'로 나온다."},
+    [exI("'한 장만'")]:{keys:["한 장만"],story:"1장 마지막 대사 '딱 한 장만이야'가 전시 제목으로 돌아온다. 작품 제목이자 마지막 말이라 1장 끝과 묶어서 외우자."}
+  }},
+  analysis:{v:1, at:0,
+    logline:"헤어진 연인의 카메라를 돌려주러 간 수진이, 끝내 지우지 못한 사진 한 장으로 이별을 매듭짓는 이야기.",
+    summary:"수진은 밤늦게 민호의 자취방에 찾아가 그의 카메라를 돌려준다. 시간을 끌면 다시 연락할 핑계가 생길까 봐서다. 민호가 카메라 속 바다 사진을 묻자 수진은 지웠다고 했다가, 사실은 지우지 못했다고 털어놓는다. 마지막으로 같이 보자는 민호에게 수진은 딱 한 장만 허락한다. 다음 날 아침 수진은 그 사진을 동아리 전시에 내기로 하고, 제목을 '한 장만'이라 붙인다.",
+    theme:"끝내는 데에도 용기가 필요하고, 사랑을 정리하는 방식은 지우기가 아니라 고르는 것일 수 있다.",
+    conflict:"이별을 먼저 말한 사람으로서 깔끔히 끝내야 한다는 결심과, 함께한 기억을 놓지 못하는 마음의 충돌.",
+    arc:[{stage:"기",text:"수진이 밤늦게 카메라를 돌려주러 민호를 찾아온다."},{stage:"승",text:"'핑계'를 둘러싼 대화로 이별이 수진의 결정이었음이 드러난다."},{stage:"전",text:"지웠다던 바다 사진을 사실은 지우지 못했다고 고백한다."},{stage:"결",text:"사진 한 장만 남겨 전시 제목 '한 장만'으로 이별을 매듭짓는다."}],
+    stages:{"1":"전","13":"결"}, turning:[1],
+    scenes:{"1":{title:"카메라를 돌려주는 밤",event:"수진이 카메라를 돌려주며 이별을 확인하고, 지우지 못한 사진을 고백한다.",chars:["수진","민호"]},
+            "13":{title:"전시 제목",event:"수진이 그 사진을 전시에 내기로 하고 '한 장만'이라는 제목을 붙인다.",chars:["수진","지우"]}},
+    beats:[{name:"수진",i:1,want:"미련 없이 끝내기",emotion:"애써 담담함",level:-2},{name:"수진",i:13,want:"사진 한 장만 남기기",emotion:"정리된 마음",level:1},
+           {name:"민호",i:1,want:"수진을 조금 더 붙잡기",emotion:"서운함",level:-3},{name:"지우",i:13,want:"선배의 속마음 알기",emotion:"호기심",level:1}],
+    chars:[{name:"수진",role:"주인공",desc:"이별을 먼저 말했고, 끝맺음도 스스로 하려는 사람."},{name:"민호",role:"상대역",desc:"헤어짐을 받아들였지만 마지막 한 번을 청하는 전 연인."},{name:"지우",role:"조력자",desc:"눈치 빠른 동아리 후배. 수진이 감춘 것을 꺼내게 만든다."}],
+    rel:[{a:"수진",b:"민호",label:"헤어진 연인",desc:"수진이 먼저 이별을 말했다. 카메라와 사진을 사이에 두고 마지막 정리를 한다.",i:exI("연락할 핑계")},
+         {a:"수진",b:"지우",label:"선후배",desc:"지우는 사진의 주인을 알아보지만, 수진은 사진만 남기겠다고 선을 긋는다.",i:exI("누가 찍었는지")},
+         {a:"지우",b:"민호",label:"선후배",desc:"지우는 민호의 카메라 화각까지 알아볼 만큼 가까운 동아리 후배다.",i:exI("화각")}]
+  },
+  chars:{"수진":{at:0,
+    summary:"수진은 감정을 말로 늘어놓지 않고 행동으로 정리하는 사람이다. 이별을 먼저 말했다는 책임감 때문에 끝맺음까지 스스로 하려 하지만, 사진 한 장 앞에서는 결심이 흔들린다.",
+    want:"민호와의 관계를 깔끔하게 끝내는 것", obstacle:"함께한 시간을 담은 사진을 지우지 못하는 자기 마음", flaw:"괜찮은 척하느라 진심을 늦게 말한다",
+    arc:[{i:1,emotion:"애써 담담함",level:-2,note:"용건만 말하고 빨리 돌아서려 하지만 사진 이야기에 무너진다."},{i:13,emotion:"정리된 마음",level:1,note:"사진을 감추다가, 결국 한 장만 남기는 방식으로 이별을 받아들인다."}],
+    speech:"짧게 끊는 반말. 핵심 단어('핑계', '한 장만')를 되풀이하며 감정을 숨긴다. 말을 고쳐 말할 때(지웠어 → 못 지웠어) 진심이 새어 나온다.",
+    points:["첫 대사는 문 앞에서 바로 용건부터: 오래 있을 생각이 없다는 몸의 상태로 시작한다.","'핑계'는 두 번 나온다. 두 번째는 정체를 밝히는 말이라 더 무겁게.","'다 지웠어'와 '못 지웠어' 사이의 짧은 쉼이 장면의 전환점이다.","2장에서 사진을 뒤집는 지문이 1장의 미련을 끊는 행동이다."],
+    rels:[{with:"민호",label:"헤어진 연인",change:"끝내려 왔다가 마지막 한 장을 함께 보는 데까지 허락한다."},{with:"지우",label:"선후배",change:"감추려다 들키지만 끝까지 사진의 주인을 말하지 않는다."}],
+    quotes:[{i:exI("연락할 핑계"),why:"이별의 책임을 스스로 지려는 태도가 드러난다."},{i:exI("다 지웠어"),why:"말을 고쳐 말하며 처음으로 진심이 나온다."},{i:exI("'한 장만'"),why:"1장의 마지막 말을 제목으로 삼아 이별을 매듭짓는다."}]
+  }}
+};
+
+/* =========================================================
+   State
+   ========================================================= */
+const S={
+  scripts:[], view:"library", curId:null, tab:"run",
+  read:{keys:true, stories:false, hide:false, open:{}, shown:{}},
+  add:{title:"", text:"", parsed:null, role:"", err:"", pdf:null, pages:0, from:1, to:1, reading:null, showText:false},
+  run:null, runSec:"all", settings:{rate:1, hint:"none", auto:true},
+  storage:"loading", loadNote:"", job:null, edit:false, confirmDel:false, confirmReset:false,
+  charSel:null, relSel:null, flashI:null
+};
+try{ const st=JSON.parse(localStorage.getItem("sp-settings")||"null"); if(st) Object.assign(S.settings, st);}catch(e){}
+function saveSettings(){ try{localStorage.setItem("sp-settings",JSON.stringify(S.settings));}catch(e){} }
+
+let col=null, sample=null, tts=null, dict=null, canImages=false;
+const app=document.getElementById("app");
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const uid8=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+function toast(msg){ const t=document.getElementById("toast"); t.textContent=msg; t.hidden=false; clearTimeout(toast._t); toast._t=setTimeout(()=>t.hidden=true,3600); }
+const STAGES=["기","승","전","결"];
+const arr=x=>Array.isArray(x)?x:[];
+const stBadge=st=>STAGES.includes(st)?`<span class="st st-${st}" title="${st}">${st}</span>`:"";
+
+/* =========================================================
+   Parsing: lines, acts and scenes
+   ========================================================= */
+const DN="[0-9０-９]+|[一二三四五六七八九十]+", HN="[일이삼사오육칠팔구십]+";
+const AFTER="(?=$|[\\s.,·:\\-–—(（\\[])";
+const ACT_RE=new RegExp(`^(?:제\\s*(?:${DN}|${HN})|(?:${DN}))\\s*막${AFTER}`);
+const SCENE_RE=new RegExp(`^(?:제\\s*(?:${DN}|${HN})|(?:${DN}))\\s*장${AFTER}`);
+const ACTSCENE_RE=new RegExp(`^((?:제\\s*)?(?:${DN}|${HN})\\s*막)[\\s,·.]*((?:제\\s*)?(?:${DN}|${HN})\\s*장)${AFTER}`);
+const SPECIAL_RE=/^(프롤로그|에필로그|서막|종막|막간|prologue|epilogue)(?=$|[\s.,·:\-–—(])/i;
+const SCENEMARK_RE=/^(S\s*#\s*\d+|#\s*\d+|씬\s*\d+|장면\s*\d+|scene\s+\d+)/i;
+function numOf(t){
+  const m=String(t).match(/[0-9０-９]+|[一二三四五六七八九十]+|[일이삼사오육칠팔구십]+/); if(!m) return null;
+  const s=m[0].replace(/[０-９]/g,c=>String.fromCharCode(c.charCodeAt(0)-65248));
+  if(/^\d+$/.test(s)) return Number(s);
+  const map={"一":1,"二":2,"三":3,"四":4,"五":5,"六":6,"七":7,"八":8,"九":9,"十":10,"일":1,"이":2,"삼":3,"사":4,"오":5,"육":6,"칠":7,"팔":8,"구":9,"십":10};
+  if(s.length===1) return map[s]||null;
+  if(s.length===2&&(s[0]==="十"||s[0]==="십")) return 10+(map[s[1]]||0);
+  if(s.length===2&&(s[1]==="十"||s[1]==="십")) return (map[s[0]]||0)*10;
+  if(s.length===3) return (map[s[0]]||0)*10+(map[s[2]]||0);
+  return null;
+}
+function parseScript(text){
+  const out=[]; let speaker=null, fresh=false, lastAct=null;
+  for(const raw of text.split(/\r?\n/)){
+    const line=raw.replace(/\s+/g," ").trim();
+    if(!line){ speaker=null; continue; }
+    if(/^[-–—\s]*\d{1,3}[-–—\s]*$/.test(line)) continue; // page numbers
+    // HWP/word-processor layout: "이름<TAB>대사", and a line that starts with a tab is a stage direction
+    if(raw.includes("\t") && !ACT_RE.test(line) && !SCENE_RE.test(line) && !SPECIAL_RE.test(line)){
+      if(/^\s*\t/.test(raw)){ out.push({k:"dir",r:"",t:line}); speaker=null; continue; }
+      const tm=raw.match(/^([^\t:：]{1,24}?)\s*\t+\s*(\S.*)$/);
+      if(tm){
+        let name=tm[1].replace(/\s+/g," ").trim(), body=tm[2].replace(/\s+/g," ").trim(), lead="";
+        const pm=name.match(/^(.*?)\s*([(（].*[)）])$/);
+        if(pm){ name=pm[1].trim(); lead=pm[2]+" "; }
+        if(name && name.length<=12 && !/[.,!?。"“”]/.test(name)){ out.push({k:"line",r:name,t:(lead+body).trim(),blk:1}); speaker=null; continue; }
+      }
+    }
+    if(line.length<=48){
+      const as=line.match(ACTSCENE_RE);
+      if(as){ const an=numOf(as[1]); if(an!==lastAct){ out.push({k:"act",r:"",t:`${an??as[1]}막`}); lastAct=an; } out.push({k:"scene",r:"",t:line.slice(as[1].length).replace(/^[\s,·.]+/,"")}); speaker=null; continue; }
+      if(ACT_RE.test(line)){ out.push({k:"act",r:"",t:line}); lastAct=numOf(line); speaker=null; continue; }
+      if(SCENE_RE.test(line)||SPECIAL_RE.test(line)||SCENEMARK_RE.test(line)){ out.push({k:"scene",r:"",t:line}); speaker=null; continue; }
+    }
+    const m=line.match(/^([^:：]{1,24}?)\s*[:：]\s*(.*)$/);
+    if(m){
+      let name=m[1].trim(), body=m[2].trim(), lead="";
+      const pm=name.match(/^(.*?)\s*([(（].*[)）])$/);
+      if(pm){ name=pm[1].trim(); lead=pm[2]+" "; }
+      if(name && name.length<=12 && !/[.,!?。"“”]/.test(name)){
+        if(!body){ speaker=name; fresh=true; continue; }
+        out.push({k:"line",r:name,t:(lead+body).trim()}); speaker=null; continue;
+      }
+    }
+    if(/^[(（\[].*[)）\]]$/.test(line)){ out.push({k:"dir",r:"",t:line}); continue; }
+    if(speaker){
+      const prev=out[out.length-1];
+      if(!fresh && prev && prev.k==="line" && prev.r===speaker) prev.t+=" "+line;
+      else out.push({k:"line",r:speaker,t:line,blk:1});
+      fresh=false; continue;
+    }
+    if(line.length<=10 && !/[.,!?。…~"'“”\-]/.test(line) && line.split(" ").length<=2){ speaker=line; fresh=true; continue; }
+    const prev=out[out.length-1];
+    if(prev && prev.k==="line") prev.t+=" "+line; else out.push({k:"dir",r:"",t:line});
+  }
+  // cover page / cast list before the first act or scene: name-only guesses there are not dialogue
+  const first=out.findIndex(l=>l.k==="act"||l.k==="scene");
+  for(let i=0;i<out.length;i++){ const l=out[i]; if(l.blk&&first>0&&i<first){ out[i]={k:"dir",r:"",t:`${l.r} ${l.t}`}; } else delete l.blk; }
+  // "엄 마" / "화 자": names letter-spaced for alignment are the same person as "엄마" / "화자"
+  const names=new Set(out.filter(l=>l.k==="line").map(l=>l.r));
+  out.forEach(l=>{ if(l.k==="line"&&/\s/.test(l.r)){ const ns=l.r.replace(/\s+/g,""); if(names.has(ns)||/^(\S\s)+\S$/.test(l.r)) l.r=ns; } });
+  return out;
+}
+function rolesOf(lines){
+  const c={}; lines.forEach(l=>{ if(l.k==="line") c[l.r]=(c[l.r]||0)+1; });
+  return Object.entries(c).sort((a,b)=>b[1]-a[1]).map(([r,n])=>({r,n}));
+}
+const secCache=new WeakMap();
+function sectionsOf(s){
+  const key=s.lines; const hit=secCache.get(key);
+  if(hit && hit.ai===s.aiSections) return hit.v;
+  const L=s.lines, out=[]; let act=null, actNo=null;
+  const marked=L.some(l=>l.k==="act"||l.k==="scene");
+  if(marked){
+    L.forEach((l,i)=>{
+      if(l.k==="act"){ act=l.t; actNo=numOf(l.t); out.push({start:i,act,actNo,sceneNo:null,title:l.t,isAct:true}); }
+      else if(l.k==="scene"){
+        const last=out[out.length-1];
+        if(last&&last.isAct&&!L.slice(last.start,i).some(x=>x.k==="line")) out.pop();
+        out.push({start:i,act,actNo,sceneNo:numOf(l.t),title:l.t});
+      }
+    });
+    if(out.length&&out[0].start>0&&L.slice(0,out[0].start).some(l=>l.k==="line")) out.unshift({start:0,title:"첫머리"});
+  } else if(s.aiSections&&s.aiSections.length){
+    s.aiSections.forEach((x,k)=>out.push({start:x.start,title:x.title||`장면 ${k+1}`,sceneNo:k+1,ai:true}));
+    if(out[0].start>0) out[0].start=0;
+  } else out.push({start:0,title:"전체",whole:true});
+  out.forEach((x,k)=>{
+    x.end=out[k+1]?out[k+1].start:L.length; x.idx=k;
+    x.short= x.actNo&&x.sceneNo? `${x.actNo}-${x.sceneNo}` : x.sceneNo? `${x.sceneNo}장` : x.actNo&&x.isAct? `${x.actNo}막` : (x.title&&!x.whole&&!x.ai? [...x.title.replace(/^d+막s*/,"").trim()].slice(0,4).join("") : "") || `#${k+1}`;
+    x.label= x.act&&!x.isAct&&!/막/.test(x.title)? `${x.act} ${x.title}` : x.title;
+  });
+  secCache.set(key,{ai:s.aiSections,v:out});
+  return out;
+}
+const secOfLine=(s,i)=>sectionsOf(s).find(x=>i>=x.start&&i<x.end);
+const speechOnly=t=>t.replace(/[(（][^)）]*[)）]/g," ").replace(/\s+/g," ").trim();
+const norm=t=>speechOnly(t).replace(/[^0-9A-Za-zㄱ-ㆎ가-힣]/g,"");
+
+/* =========================================================
+   PDF → text (pdf.js on the main thread); scanned pages → the AI (API mode) reads the image
+   ========================================================= */
+try{ if(window.pdfjsLib && !globalThis.pdfjsWorker && globalThis["pdfjs-dist/build/pdf.worker"]) globalThis.pdfjsWorker=globalThis["pdfjs-dist/build/pdf.worker"]; }catch(e){}
+function rowsToText(items){
+  const rows=[];
+  for(const it of items){
+    if(!it.str) continue;
+    const x=it.transform[4], y=it.transform[5], h=Math.abs(it.transform[3])||Math.abs(it.height)||10;
+    let row=rows.find(r=>Math.abs(r.y-y)<h*0.5);
+    if(!row){ row={y,h,items:[]}; rows.push(row); }
+    row.items.push({x,w:it.width||0,str:it.str,h});
+  }
+  rows.sort((a,b)=>b.y-a.y);
+  return rows.map(r=>{
+    r.items.sort((a,b)=>a.x-b.x);
+    let s="", end=null, gaps=0;
+    for(const it of r.items){
+      if(end!==null){
+        const gap=it.x-end;
+        if(gap>r.h*2.2 && gaps===0 && s.trim().length<=10 && !/[:：]/.test(s) && it.str.trim()) { s=s.trim()+": "; gaps++; }
+        else if(gap>r.h*0.2 && !s.endsWith(" ") && !it.str.startsWith(" ")) s+=" ";
+      }
+      s+=it.str; end=it.x+it.w;
+    }
+    return s.trim();
+  }).filter(Boolean).join("\n");
+}
+async function openPdf(file){
+  if(!window.pdfjsLib) throw new Error("nolib");
+  const data=new Uint8Array(await file.arrayBuffer());
+  return pdfjsLib.getDocument({data, isEvalSupported:false}).promise;
+}
+async function pageImage(page){
+  const vp0=page.getViewport({scale:1}); const scale=Math.min(2.2,1600/vp0.width);
+  const vp=page.getViewport({scale}); const c=document.createElement("canvas"); c.width=vp.width; c.height=vp.height;
+  const ctx=c.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,c.width,c.height);
+  await page.render({canvasContext:ctx, viewport:vp}).promise;
+  return new Promise(res=>c.toBlob(b=>res(b),"image/jpeg",0.85));
+}
+const hangulRatio=t=>{ const n=t.replace(/\s/g,"").length; return n? (t.match(/[가-힣]/g)||[]).length/n : 0; };
+async function readPdf(){
+  const A=S.add; if(!A.pdf) return;
+  const from=Math.max(1,Math.min(A.from,A.pages)), to=Math.max(from,Math.min(A.to,A.pages));
+  const ctl=new AbortController(); A.reading={done:0,total:to-from+1,ctl,note:""}; A.err=""; render();
+  let texts=[], ocrPages=0;
+  try{
+    const pdf=A.pdf;
+    for(let p=from;p<=to;p++){
+      if(ctl.signal.aborted) throw {code:"cancelled"};
+      const page=await pdf.getPage(p);
+      const tc=await page.getTextContent();
+      let t=rowsToText(tc.items);
+      if(t.replace(/\s/g,"").length<20 || hangulRatio(t)<0.25){
+        if(sample&&canImages){
+          A.reading.note="글자가 그림으로 된 쪽이라 AI가 읽는 중"; render();
+          const img=await pageImage(page);
+          const r=await sample(`이 이미지는 한국어 연극 대본의 한 쪽이다. 보이는 글을 빠짐없이, 한 글자도 바꾸지 말고 옮겨 적어라.
+형식: 대사는 "인물이름: 대사" 한 줄로(대사가 여러 줄로 꺾여 있으면 한 줄로 합친다), 지문은 괄호 ( ) 안에, "1막", "2장" 같은 막·장 제목과 장소 표시는 그 줄 그대로. 쪽 번호와 머리말은 빼라. 옮겨 적은 글만 답하라.`,{images:img, signal:ctl.signal});
+          t=r.text; ocrPages++;
+        } else if(!t.trim()) { A.reading.note="그림으로 된 쪽은 설정에서 API 키를 넣어야 읽을 수 있어요"; }
+      }
+      texts.push(t);
+      A.reading.done=p-from+1; render();
+    }
+    A.text=texts.join("\n\n");
+    doParse();
+    if(ocrPages) toast(`${ocrPages}쪽은 AI가 그림에서 글자를 읽었어요. 오타가 있을 수 있어요.`);
+  }catch(e){
+    if(e&&e.code==="cancelled") A.err="읽기를 멈췄어요.";
+    else if(e&&e.message==="nolib") A.err="PDF 읽기 도구를 불러오지 못했어요. 페이지를 새로 열어 주세요.";
+    else if(e&&e.name==="PasswordException") A.err="암호가 걸린 PDF는 읽을 수 없어요.";
+    else A.err="PDF를 읽지 못했어요."+(e&&e.code?` (${e.code})`:"");
+  }finally{ A.reading=null; render(); }
+}
+/* ---------- 한글(HWP 5.0 / HWPX) → text ---------- */
+function hwpToText(bytes){
+  const cfb=CFB.read(bytes,{type:"array"});
+  const fhE=CFB.find(cfb,"FileHeader");
+  if(!fhE) throw {code:"not_hwp"};
+  const fh=fhE.content, sig=String.fromCharCode(...Array.from(fh.slice(0,17)));
+  if(sig!=="HWP Document File") throw {code:"not_hwp"};
+  const props=fh[36]|(fh[37]<<8)|(fh[38]<<16)|(fh[39]<<24);
+  if(props&2) throw {code:"encrypted"};
+  if(props&4) throw {code:"distribution"};
+  const secs=cfb.FullPaths.map((p,i)=>({p,i})).filter(x=>/BodyText\/Section(\d+)$/.test(x.p))
+    .sort((a,b)=>Number(a.p.match(/(\d+)$/)[1])-Number(b.p.match(/(\d+)$/)[1]));
+  if(!secs.length) throw {code:"no_body"};
+  const out=[];
+  for(const sx of secs){
+    let d=cfb.FileIndex[sx.i].content; d=d instanceof Uint8Array?d:new Uint8Array(d);
+    if(props&1) d=pako.inflateRaw(d);
+    hwpSection(d,out);
+  }
+  return out.join("\n").replace(/\n{3,}/g,"\n\n");
+}
+function hwpParaText(d,o,sz){
+  let s="";
+  for(let i=0;i<sz/2;){
+    const c=d[o+i*2]|(d[o+i*2+1]<<8);
+    if(c<32){
+      if(c===10){ s+="\n"; i++; continue; }
+      if(c===13||c===0||(c>=24&&c<=31)){ i++; continue; }
+      if(c===9) s+="\t";
+      i+=8; continue;
+    }
+    s+=String.fromCharCode(c); i++;
+  }
+  return s;
+}
+function rowLines(rows){
+  const lines=[];
+  for(const cells of rows){
+    const filled=cells.filter(Boolean);
+    if(!filled.length){ lines.push(""); continue; }
+    if(cells.length>=2&&cells[0]&&cells[0].length<=12&&!/\n/.test(cells[0])&&cells.slice(1).some(Boolean)) lines.push(cells[0]+"\t"+cells.slice(1).filter(Boolean).join(" ").replace(/\n/g," "));
+    else if(cells.length>=2&&!cells[0]&&cells.slice(1).some(Boolean)) lines.push("\t"+cells.slice(1).filter(Boolean).join(" ").replace(/\n/g," "));
+    else lines.push(...filled);
+  }
+  lines.push("");
+  return lines;
+}
+function hwpSection(d,out){
+  const dv=new DataView(d.buffer,d.byteOffset,d.byteLength);
+  const stack=[], body=[];
+  const target=()=>{ const t=stack[stack.length-1]; if(!t) return body; if(t.kind==="tbl") return t.cell? t.cell.paras : (t.junk=t.junk||[]); return t.paras; };
+  const close=t=>{
+    let lines=[];
+    if(t.kind==="tbl"){
+      const rows=Object.keys(t.rows).map(Number).sort((a,b)=>a-b).map(r=>t.rows[r].sort((a,b)=>a.col-b.col).map(c=>c.paras.map(p=>p.text).join("\n").trim()));
+      lines=rowLines(rows);
+    } else if(t.kind==="gso") lines=t.paras.map(p=>p.text);
+    const dest=target(); lines.forEach(text=>dest.push({text}));
+  };
+  let o=0;
+  while(o+4<=d.length){
+    const h=dv.getUint32(o,true); o+=4;
+    const tag=h&0x3ff, lv=(h>>>10)&0x3ff; let sz=h>>>20;
+    if(sz===0xfff){ sz=dv.getUint32(o,true); o+=4; }
+    while(stack.length&&lv<=stack[stack.length-1].level){ const t=stack.pop(); close(t); }
+    if(tag===71&&sz>=4){
+      const id=String.fromCharCode(d[o+3],d[o+2],d[o+1],d[o]);
+      if(id==="tbl ") stack.push({level:lv,kind:"tbl",rows:{},cell:null});
+      else if(id==="gso ") stack.push({level:lv,kind:"gso",paras:[]});
+      else if(["head","foot","fn  ","en  ","atno","pgnp","tcmt"].includes(id)) stack.push({level:lv,kind:"skip",paras:[]});
+    } else if(tag===72){
+      const t=stack[stack.length-1];
+      if(t&&t.kind==="tbl"&&sz>=12){ const col=dv.getUint16(o+8,true), row=dv.getUint16(o+10,true); t.cell={col,paras:[]}; (t.rows[row]=t.rows[row]||[]).push(t.cell); }
+    } else if(tag===66){ target().push({text:""}); }
+    else if(tag===67){ const ps=target(); if(!ps.length) ps.push({text:""}); ps[ps.length-1].text+=hwpParaText(d,o,sz); }
+    o+=sz;
+  }
+  while(stack.length) close(stack.pop());
+  for(const p of body) out.push(p.text);
+}
+async function hwpxToText(bytes){
+  const zip=await JSZip.loadAsync(bytes);
+  const names=Object.keys(zip.files).filter(n=>/^Contents\/section\d+\.xml$/i.test(n)).sort((a,b)=>Number(a.match(/(\d+)\.xml$/i)[1])-Number(b.match(/(\d+)\.xml$/i)[1]));
+  if(!names.length) throw {code:"not_hwp"};
+  const out=[];
+  const runText=el=>{ let s=""; for(const n of el.childNodes){ if(n.nodeType===3) s+=n.nodeValue; else if(n.nodeType===1){ const ln=n.localName; if(ln==="tab") s+="\t"; else if(ln==="lineBreak") s+="\n"; else if(ln!=="tbl") s+=runText(n); } } return s; };
+  const up=(n,name)=>{ for(let e=n.parentElement;e;e=e.parentElement) if(e.localName===name) return e; return null; };
+  const walkPara=(p,dest)=>{
+    // body text of this paragraph (outside any table), then its tables row by row
+    let txt=""; for(const t of p.getElementsByTagNameNS("*","t")) if(!up(t,"tbl")) txt+=runText(t);
+    const tbls=[...p.getElementsByTagNameNS("*","tbl")].filter(t=>!up(t,"tbl"));
+    if(txt.trim()||!tbls.length) dest.push(txt);
+    for(const tb of tbls){
+      const rows=[...tb.children].filter(c=>c.localName==="tr").map(tr=>[...tr.children].filter(c=>c.localName==="tc").map(tc=>
+        [...tc.getElementsByTagNameNS("*","p")].filter(n=>up(n,"tc")===tc).map(n=>{ let s=""; for(const t of n.getElementsByTagNameNS("*","t")) if(up(t,"tc")===tc) s+=runText(t); return s; }).join("\n").trim()));
+      dest.push(...rowLines(rows));
+    }
+  };
+  for(const nm of names){
+    const xml=new DOMParser().parseFromString(await zip.file(nm).async("string"),"application/xml");
+    const root=xml.documentElement;
+    for(const p of root.children) if(p.localName==="p") walkPara(p,out);
+  }
+  return out.join("\n").replace(/\n{3,}/g,"\n\n");
+}
+async function pickFile(file){
+  if(!file) return;
+  const n=file.name.toLowerCase();
+  if(n.endsWith(".hwp")||n.endsWith(".hwpx")) return pickHwp(file);
+  return pickPdf(file);
+}
+async function pickHwp(file){
+  const A=S.add; A.err=""; A.parsed=null; A.text=""; A.pdf=null;
+  A.reading={done:0,total:1,ctl:new AbortController(),note:"한글 파일 읽는 중",unit:"파일"}; render();
+  try{
+    const bytes=new Uint8Array(await file.arrayBuffer());
+    const isZip=bytes[0]===0x50&&bytes[1]===0x4B;
+    if(isZip&&!window.JSZip || !isZip&&(!window.CFB||!window.pako)) throw {code:"nolib"};
+    A.text= isZip? await hwpxToText(bytes) : hwpToText(bytes);
+    if(!A.text.replace(/\s/g,"")) throw {code:"empty"};
+    if(!A.title) A.title=file.name.replace(/\.hwpx?$/i,"");
+    A.reading=null; doParse();
+  }catch(e){
+    const c=e&&e.code;
+    A.err= c==="distribution"? "배포용으로 저장된 한글 문서는 잠겨 있어서 읽을 수 없어요. 한글에서 PDF로 저장해서 올려 주세요."
+      : c==="encrypted"? "암호가 걸린 한글 문서는 읽을 수 없어요. 암호를 풀고 저장하거나 PDF로 올려 주세요."
+      : c==="nolib"? "한글 파일 읽기 도구를 불러오지 못했어요. 페이지를 새로 열어 주세요."
+      : c==="empty"? "문서에서 글자를 찾지 못했어요. 그림으로 된 대본이면 PDF로 올려 주세요."
+      : "이 한글 파일을 읽지 못했어요. 아주 오래된 형식(HWP 3.0)이거나 손상된 파일일 수 있어요. 한글에서 PDF로 저장해서 올려 주세요.";
+    A.reading=null; render();
+  }
+}
+async function pickPdf(file){
+  const A=S.add;
+  if(!file) return;
+  if(!/pdf$/i.test(file.type)&&!/\.pdf$/i.test(file.name)){ A.err="PDF나 한글(HWP) 파일만 올릴 수 있어요."; render(); return; }
+  A.err=""; A.parsed=null; A.text="";
+  try{
+    A.pdf=await openPdf(file); A.pages=A.pdf.numPages; A.from=1; A.to=A.pages;
+    if(!A.title) A.title=file.name.replace(/\.pdf$/i,"");
+    if(A.pages<=60){ render(); readPdf(); } else render();
+  }catch(e){ A.pdf=null; A.err= e&&e.name==="PasswordException"? "암호가 걸린 PDF는 읽을 수 없어요." : "PDF를 열지 못했어요."; render(); }
+}
+document.getElementById("backupInput").addEventListener("change",e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; if(f) importBackup(f); });
+document.getElementById("pdfInput").addEventListener("change",e=>{ const f=e.target.files&&e.target.files[0]; e.target.value=""; pickFile(f); });
+function doParse(){
+  const A=S.add; const lines=parseScript(A.text); const rs=rolesOf(lines);
+  if(!A.title){ const first=A.text.split(/\r?\n/).map(x=>x.trim()).find(Boolean); if(first&&first.length<=30&&!ACT_RE.test(first)&&!SCENE_RE.test(first)&&!/[:：\t]/.test(first)) A.title=first; }
+  A.err=rs.length>=2?"":"배역 이름을 잘 찾지 못했어요. 아래 'AI로 나누기'를 눌러 보세요.";
+  setParsed(lines);
+}
+/* parsed lines → same-character groups (rules now, AI in the background) → merged lines */
+function setParsed(lines){
+  const A=S.add;
+  A.raw=lines; A.groups=ruleAliases(lines); A.called={}; A.aliasNote="";
+  applyAddAliases();
+  const rs=rolesOf(A.parsed); A.role=rs[0]?rs[0].r:"";
+  render();
+  if(sample&&!aiManual&&rs.length>=2) runAddAliases();
+}
+function applyAddAliases(){
+  const A=S.add; A.parsed=applyAliases(A.raw,A.groups);
+  const m=aliasMap(A.groups); if(A.role&&m[A.role]) A.role=m[A.role];
+}
+async function runAddAliases(){
+  const A=S.add; const raw=A.raw;
+  A.aliasBusy=new AbortController(); A.aliasNote=""; S.manualLabel="같은 인물 찾기"; render();
+  try{
+    const r=await aiAliases(raw,A.aliasBusy.signal);
+    if(A.raw!==raw) return;
+    A.groups=mergeGroups(A.groups,r.groups,raw); A.called=r.called; applyAddAliases();
+    if(!A.groups.length) A.aliasNote="같은 인물로 보이는 다른 표기는 찾지 못했어요.";
+  }catch(e){ if(A.raw===raw) A.aliasNote= e&&e.code==="cancelled"? "" : "AI로 같은 인물을 찾지 못했어요. "+aiErrMsg(e); }
+  finally{ if(A.raw===raw){ A.aliasBusy=null; render(); } }
+}
+async function aiParse(){
+  if(!sample) return;
+  const A=S.add; const src=A.text; if(!src.trim()) return;
+  const chunks=[]; let buf="";
+  for(const ln of src.split("\n")){ if(buf.length+ln.length>(aiManual?40000:6000)&&buf){ chunks.push(buf); buf=""; } buf+=ln+"\n"; }
+  if(buf.trim()) chunks.push(buf);
+  const ctl=new AbortController(); A.reading={done:0,total:chunks.length,ctl,note:"AI가 배역별로 나누는 중",unit:"묶음"}; A.err=""; render();
+  const all=[];
+  try{
+    for(const ch of chunks){
+      const res=await sample.json(`다음은 한국어 연극 대본 텍스트의 일부다(PDF에서 뽑아 줄바꿈이 어긋났을 수 있다). 줄 단위로 나눠 JSON 배열로만 답하라. 각 원소는 {"k":"line|dir|act|scene","r":"말하는 인물 이름(대사일 때만, 아니면 빈 문자열)","t":"원문"}.
+규칙: 대사 내용은 한 글자도 바꾸지 않는다. 같은 인물이 이어 말한 대사가 여러 줄로 꺾였으면 하나로 합친다. "1막","제2막" 같은 막 제목은 act, "3장", 장소·시간 표시 같은 장 제목은 scene, 행동 묘사는 dir. 쪽 번호·머리말은 버린다.
+
+${ch}`,{signal:ctl.signal});
+      (Array.isArray(res)?res:[]).forEach(x=>{ const t=String(x&&x.t||"").trim(); if(t) all.push({k:["line","dir","act","scene"].includes(x.k)?x.k:"dir",r:x.k==="line"?String(x.r||"").trim():"",t}); });
+      A.reading.done++; render();
+    }
+    const rs=rolesOf(all);
+    A.err=rs.length?"":"AI도 배역을 찾지 못했어요. 대본 형식을 확인해 주세요.";
+    A.reading=null; setParsed(all); return;
+  }catch(e){ A.err=aiErrMsg(e); }
+  finally{ A.reading=null; render(); }
+}
+
+/* =========================================================
+   Same character, different speaker labels
+   (안순돌 ↔ 순돌이, 순돌소리, 애칭·직함·부칭 …)
+   ========================================================= */
+const SURNAMES="김이박최정강조윤장임한오서신권황안송류전홍고문양손배백허유남심노하곽성차주우구민진나지엄채원천방공현함변염여추도소석선설마길연위표명기반왕금옥육인맹제모탁국어은편용";
+const VOICE_RE=/^(.+?)\s*\(?\s*(목소리|소리|V\.?O\.?|O\.?S\.?)\s*\)?$/i;
+function nameForms(n){
+  const b=n.replace(/\s+/g,""), f=new Set([b]);
+  if(/^[가-힣]+$/.test(b)){
+    if(b.length>=3&&b.endsWith("이")) f.add(b.slice(0,-1));
+    if(b.length===3&&SURNAMES.includes(b[0])) f.add(b.slice(1));
+    if(b.length===4&&SURNAMES.includes(b[0])&&b.endsWith("이")) f.add(b.slice(1,-1));
+  }
+  return f;
+}
+const isFullName=n=>/^[가-힣]{3}$/.test(n)&&SURNAMES.includes(n[0])&&!n.endsWith("이");
+function castText(lines){ const first=lines.findIndex(l=>l.k==="act"||l.k==="scene"); return lines.slice(0,first>0?first:0).filter(l=>l.k==="dir").map(l=>l.t).join("\n"); }
+function pickMain(names,lines){
+  const cast=castText(lines), cnt=Object.fromEntries(rolesOf(lines).map(x=>[x.r,x.n]));
+  return [...names].sort((a,b)=>(cast.includes(b)-cast.includes(a))||((cnt[b]||0)-(cnt[a]||0)))[0];
+}
+function ruleAliases(lines){
+  const roles=rolesOf(lines).map(x=>x.r), edges=[];
+  for(let x=0;x<roles.length;x++) for(let y=x+1;y<roles.length;y++){
+    const a=roles[x], b=roles[y];
+    const va=a.match(VOICE_RE), vb=b.match(VOICE_RE);
+    const fa=nameForms(va?va[1]:a), fb=nameForms(vb?vb[1]:b);
+    if(![...fa].some(k=>fb.has(k))) continue;
+    if(isFullName(a)&&isFullName(b)) continue; // 김철수 / 박철수: different people
+    if(/\d$/.test(a)||/\d$/.test(b)) continue;   // 관군1 / 관군2
+    edges.push({a,b,reason: va||vb? "무대 밖에서 들리는 같은 인물의 목소리예요." : "성을 빼거나 '이'를 붙여 부른 같은 이름이에요."});
+  }
+  return mergeGroups([],edges.map(e=>({names:[e.a,e.b],reason:e.reason,sure:true,src:"rule"})),lines);
+}
+function mergeGroups(base,add,lines){
+  const groups=base.map(g=>({...g,names:[...g.names],reasons:[...(g.reasons||[g.reason])]}));
+  for(const g of add){
+    const names=g.names||[g.main,...(g.aliases||[])];
+    const hit=groups.filter(x=>x.names.some(n=>names.includes(n)));
+    const merged={names:[...new Set([...names,...hit.flatMap(h=>h.names)])], reasons:[...hit.flatMap(h=>h.reasons), g.reason].filter(Boolean),
+      sure: g.sure!==false || hit.some(h=>h.sure), src: hit.length? "both" : (g.src||"ai"), i: g.i ?? (hit[0]&&hit[0].i), mainHint: g.main || (hit[0]&&hit[0].mainHint)};
+    for(const h of hit) groups.splice(groups.indexOf(h),1);
+    groups.push(merged);
+  }
+  return groups.map(g=>{ const main=g.mainHint&&g.names.includes(g.mainHint)? g.mainHint : pickMain(g.names,lines);
+    return {...g, main, reason:[...new Set(g.reasons)].join(" "), on: g.on ?? g.sure}; }).filter(g=>g.names.length>1);
+}
+function aliasMap(groups){ const m={}; (groups||[]).filter(g=>g.on).forEach(g=>g.names.forEach(n=>{ if(n!==g.main) m[n]=g.main; })); return m; }
+function applyAliases(lines,groups){
+  const m=aliasMap(groups);
+  return lines.map(l=> l.k==="line"&&m[l.r]? {...l,r:m[l.r],a:l.a||l.r} : l);
+}
+/* words people are called by: frequent name-like words across the WHOLE play (so 꼬스쨔 is seen even if sampling misses it) */
+function frequentWords(lines){
+  const c={}, cast=castText(lines);
+  lines.forEach(l=>{ if(l.k!=="line"&&l.k!=="dir") return;
+    speechOnly(l.t).split(/[\s.,!?…~"'“”‘’·:;()\-—「」『』]+/).forEach(w=>{
+      w=w.replace(/(에게서|에게|한테|께서|께|이여|이야|야|아|여|은|는|이|가|을|를|의|도|와|과|랑|하고|님|씨)$/,"");
+      if(w.length>=2&&/^[가-힣]+$/.test(w)) c[w]=(c[w]||0)+1; }); });
+  const all=Object.entries(c).filter(([,n])=>n>=2);
+  const inCast=all.filter(([w])=>cast.includes(w));
+  const top=all.filter(([,n])=>n>=3).sort((a,b)=>b[1]-a[1]).slice(0,220);
+  const seen=new Set(); return [...inCast,...top].filter(([w])=>!seen.has(w)&&seen.add(w)).map(([w,n])=>`${w}(${n})`).join(", ");
+}
+async function aiAliases(lines,signal){
+  const roles=rolesOf(lines); if(roles.length<2||!sample) return {groups:[],called:{}};
+  const set=new Set(roles.map(x=>x.r));
+  const samples=roles.slice(0,70).map(x=>`- ${x.r} (${x.n}줄): ${lines.filter(l=>l.k==="line"&&l.r===x.r).slice(0,2).map(l=>l.t.slice(0,60)).join(" / ")}`).join("\n");
+  const body=lines.map((l,i)=>({l,i})).filter(o=>o.l.k==="line"||o.l.k==="dir");
+  const step=Math.max(1,Math.ceil(body.length/260));
+  const flow=body.filter((_,k)=>k%step===0).map(o=>`[${o.i}] ${o.l.k==="line"?o.l.r+": ":"(지문) "}${o.l.t.slice(0,90)}`).join("\n");
+  const res=await sample.json(`너는 연극 대본을 정리하는 드라마투르그다. 대사 앞에 붙은 화자 표기가 서로 다르지만 실제로는 같은 인물인 경우를 찾아라.
+흔한 경우: 성을 뺀 이름(안순돌 ↔ 순돌이), 이름에 '이'를 붙여 부름, 애칭·약칭, 직함과 이름(왕 ↔ 클로디어스, 부인 ↔ 노라), 무대 밖 목소리(OO소리, OO 목소리), 번역 표기 차이·오탈자(뜨레블레프 ↔ 트레플료프).
+러시아 고전은 특히 주의하라. 한 인물이 성, 이름+부칭, 애칭으로 번갈아 불린다. 등장인물 소개의 정식 이름에서 애칭을 떠올려 연결하라. 예: 꼰스딴찐 가브릴로비치 뜨레블레프 → 꼬스쨔, 이리나 니꼴라예브나 아르까지나 → 이리나, 류보피 안드레예브나 라네프스까야 → 류바·류보치까, 이반 → 바냐, 알렉산드르 → 사샤, 마리야 → 마샤, 소피야 → 소냐, 니꼴라이 → 꼴랴, 미하일 → 미샤, 예브게니 → 제냐, 드미뜨리 → 미쨔, 알렉세이 → 알료샤, 바르바라 → 바랴, 아나스따시야 → 나스쨔.
+셰익스피어·몰리에르 등 다른 고전도 직함, 성, 애칭이 섞여 나온다.
+같은 인물이라는 근거가 대본 흐름(등장인물 소개, 다른 인물이 부르는 호칭, 앞뒤 대사의 주고받음, 지문의 이름)에 있을 때만 묶어라. 비슷한 이름이어도 다른 사람(아이1과 아이2, 관군1과 관군2, 아버지와 아들, 같은 직함의 다른 인물)은 묶지 마라. 조금이라도 의심스러우면 sure를 false로.
+또 주요 인물마다 대사·지문 속에서 불리는 다른 이름(애칭·호칭·별명·직함)을 찾아라.
+JSON 하나로만 답하라:
+{"groups":[{"main":"대표로 쓸 표기(목록의 이름 중 등장인물 소개에 나오거나 가장 정식인 것)","aliases":["같은 인물의 다른 표기 — 목록에 있는 이름만"],"sure":true,"reason":"근거 한 문장","i":근거가 보이는 줄 번호}],
+ "called":[{"name":"목록에 있는 인물 표기","as":["대사·지문 속에서 불리는 이름"]}]}
+
+등장인물 소개·앞부분:
+${castText(lines).slice(0,3000)||"(없음)"}
+
+화자 표기 목록(대사 수, 첫 대사):
+${samples}
+
+대본 전체에서 자주 나오는 낱말(조사를 뗀 형태, 횟수) — 이 중에 인물을 부르는 이름·애칭이 있으면 called에 넣어라:
+${frequentWords(lines)}
+
+대본 흐름(고르게 뽑은 일부, [줄 번호]):
+${flow}`,{signal});
+  const groups=arr(res&&res.groups).filter(g=>g&&typeof g==="object").map(g=>({main:String(g.main||""),aliases:(Array.isArray(g.aliases)?g.aliases:[]).map(String),sure:g.sure===true,reason:String(g.reason||""),i:Number.isFinite(Number(g.i))?Number(g.i):null,src:"ai"}))
+    .map(g=>({...g,names:[...new Set([g.main,...g.aliases])].filter(n=>set.has(n))})).filter(g=>g.names.length>1).map(g=>({...g,main:set.has(g.main)?g.main:undefined}));
+  // accept [{name, as:[…]}] (asked for) and {name:[…]} (a common variation)
+  const rawCalled=res&&res.called;
+  const pairs=Array.isArray(rawCalled)? rawCalled.map(c=>[c&&c.name,c&&c.as]) : rawCalled&&typeof rawCalled==="object"? Object.entries(rawCalled) : [];
+  const called={}; for(const [nm,as] of pairs){ const n=String(nm||""); if(set.has(n)) called[n]=[...new Set((Array.isArray(as)?as:[as]).filter(Boolean).map(String).filter(x=>x&&x!==n))].slice(0,8); }
+  return {groups,called};
+}
+function aliasCard(groups,busy,note,prefix,lines){
+  const cnt=Object.fromEntries(rolesOf(lines).map(x=>[x.r,x.n]));
+  return `<div class="panel"><div class="row"><h3 class="grow">같은 인물로 보이는 이름</h3>${busy?`<span class="small muted"><span class="spinner"></span> AI가 흐름을 보고 찾는 중</span>`:""}</div>
+    ${groups.length?groups.map((g,k)=>`<label class="rel" style="cursor:pointer"><span class="row"><input type="checkbox" data-alias="${prefix}" data-k="${k}" ${g.on?"checked":""}>
+      <b>${esc(g.main)}</b><span class="muted">←</span>${g.names.filter(n=>n!==g.main).map(n=>`<span class="tag plain">${esc(n)} ${cnt[n]||0}</span>`).join(" ")}
+      ${g.sure?"":'<span class="tag ng">확인 필요</span>'}</span><span class="small muted">${esc(g.reason)}</span></label>`).join("")
+      : `<p class="small muted">${busy?"찾는 중이에요.":esc(note||"같은 인물로 보이는 다른 표기가 없어요.")}</p>`}
+    ${groups.length?`<p class="small muted">체크한 것만 하나로 합쳐요. 대본에는 원래 적힌 이름도 작게 같이 보여요.</p>`:""}
+    ${note&&groups.length?`<p class="small muted">${esc(note)}</p>`:""}
+    ${aiManual&&!busy&&prefix==="add"?`<div class="row"><button data-act="addaliasai">AI로 애칭·호칭까지 찾기</button><span class="small muted">ChatGPT·제미나이에 한 번 물어봐요.</span></div>`:""}
+    <details><summary>직접 합치기</summary><div class="row" style="margin-top:8px">
+      <select id="${prefix}From" aria-label="합칠 이름" style="width:auto;flex:1">${rolesOf(lines).map(x=>`<option>${esc(x.r)}</option>`).join("")}</select>
+      <span class="muted">→</span>
+      <select id="${prefix}To" aria-label="같은 인물" style="width:auto;flex:1">${rolesOf(lines).map(x=>`<option>${esc(x.r)}</option>`).join("")}</select>
+      <button data-act="manualalias" data-p="${prefix}">합치기</button></div></details>
+  </div>`;
+}
+function addManualGroup(groups,from,to,lines){
+  if(!from||!to||from===to) return groups;
+  return mergeGroups(groups,[{names:[from,to],main:to,sure:true,reason:"직접 합쳤어요.",src:"me"}],lines).map(g=>g.names.includes(from)&&g.names.includes(to)?{...g,on:true,main:to}:g);
+}
+/* existing script: find, apply and undo merges */
+async function findAliasesFor(s){
+  S.aliasEdit={groups:ruleAliases(s.lines),busy:null,note:""}; render();
+  if(!sample){ S.aliasEdit.note="AI 설정을 먼저 확인해 주세요."; render(); return; }
+  const E=S.aliasEdit; E.busy=new AbortController(); S.manualLabel="같은 인물 찾기"; render();
+  try{ const r=await aiAliases(s.lines,E.busy.signal); if(S.aliasEdit!==E) return; E.groups=mergeGroups(E.groups,r.groups,s.lines); E.called=r.called; if(!E.groups.length) E.note="같은 인물로 보이는 다른 표기는 찾지 못했어요."; }
+  catch(e){ if(S.aliasEdit===E) E.note= e&&e.code==="cancelled"? "" : aiErrMsg(e); }
+  finally{ if(S.aliasEdit===E){ E.busy=null; render(); } }
+}
+function applyAliasEdit(s){
+  const E=S.aliasEdit; if(!E) return;
+  const m=aliasMap(E.groups);
+  s.lines=applyAliases(s.lines,E.groups);
+  if(m[s.myRole]) s.myRole=m[s.myRole];
+  s.called=Object.assign({},s.called||{},E.called||{});
+  saveScript(s,0); S.aliasEdit=null; render();
+  toast(Object.keys(m).length? "같은 인물을 합쳤어요. 작품·인물 분석을 다시 하면 합친 이름으로 정리돼요." : "합칠 이름을 고르지 않았어요.");
+}
+/* tell the analysis which names are the same person, and fold any nickname it returns back into the speaker label */
+function aliasNote(s){
+  const parts=[];
+  mergedNow(s).forEach(g=>parts.push(`${g.main} — 대본에서 ${g.aliases.join(", ")}(으)로도 표기`));
+  Object.entries(s.called||{}).forEach(([n,as])=>{ if(as&&as.length) parts.push(`${n} — 대사에서 ${as.join(", ")}(으)로 불림`); });
+  return parts.length? `같은 인물의 다른 이름(분석 결과에는 반드시 왼쪽 이름만 써라):\n${parts.join("\n")}\n` : "";
+}
+function canonName(s,n){
+  n=String(n||"").trim(); if(!n) return n;
+  const labels=new Set(rolesOf(s.lines).map(x=>x.r)); if(labels.has(n)) return n;
+  for(const g of mergedNow(s)) if(g.aliases.includes(n)) return g.main;
+  for(const [k,as] of Object.entries(s.called||{})) if((as||[]).includes(n)) return k;
+  return n;
+}
+function mergedNow(s){ const g={}; s.lines.forEach(l=>{ if(l.k==="line"&&l.a&&l.a!==l.r) (g[l.r]=g[l.r]||new Set()).add(l.a); }); return Object.entries(g).map(([main,set])=>({main,aliases:[...set]})); }
+function undoAlias(s,a){ s.lines=s.lines.map(l=> l.k==="line"&&l.a===a? (({a:_,...rest})=>({...rest,r:a}))(l) : l); saveScript(s,0); render(); }
+
+/* =========================================================
+   Speech rendering
+   ========================================================= */
+function keyMask(text, keys){
+  const m=new Array(text.length).fill(false);
+  (keys||[]).forEach(k=>{ if(!k) return; let p=text.indexOf(k); while(p>=0){ for(let j=p;j<p+k.length;j++) m[j]=true; p=text.indexOf(k,p+k.length);} });
+  return m;
+}
+const isLetter=ch=>/[0-9A-Za-zㄱ-ㆎ가-힣]/.test(ch);
+function speechHTML(text, o={}){
+  let html="";
+  for(const part of text.split(/([(（][^)）]*[)）])/)){
+    if(!part) continue;
+    if(/^[(（]/.test(part)){ html+=`<span class="inline-dir">${esc(part)}</span>`; continue; }
+    const km=keyMask(part,o.keys); let open=false;
+    for(let i=0;i<part.length;i++){
+      const ch=part[i], wordStart=i===0||/\s/.test(part[i-1]);
+      const hidden=o.mask && isLetter(ch) && !(o.mask==="first"&&wordStart) && !(o.mask==="keys"&&km[i]);
+      const marked=!hidden && km[i] && (o.showKeys||o.mask==="keys");
+      if(marked&&!open){ html+='<mark class="key">'; open=true; }
+      if(!marked&&open){ html+="</mark>"; open=false; }
+      html+= hidden? '<span class="h"></span>' : esc(ch);
+    }
+    if(open) html+="</mark>";
+  }
+  return html;
+}
+function boldKeys(story, keys){ let s=esc(story); (keys||[]).forEach(k=>{ const e=esc(k); if(e) s=s.split(e).join(`<b>${e}</b>`); }); return s; }
+
+/* =========================================================
+   Storage: this device (IndexedDB). Phone ↔ PC by backup file.
+   ========================================================= */
+const idb={
+  db:null,
+  open(){ if(this.db) return Promise.resolve(this.db); return new Promise(res=>{ try{ const r=indexedDB.open("daebon",1);
+    r.onupgradeneeded=()=>{ const d=r.result; if(!d.objectStoreNames.contains("scripts")) d.createObjectStore("scripts",{keyPath:"id"}); };
+    r.onsuccess=()=>{ this.db=r.result; res(this.db); }; r.onerror=()=>res(null); }catch(e){ res(null); } }); },
+  async run(mode,fn){ const d=await this.open(); if(!d) throw new Error("noidb"); return new Promise((res,rej)=>{ const t=d.transaction("scripts",mode); const rq=fn(t.objectStore("scripts")); t.oncomplete=()=>res(rq&&rq.result); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); }); },
+  all(){ return this.run("readonly",st=>st.getAll()); },
+  put(s){ return this.run("readwrite",st=>st.put(s)); },
+  del(id){ return this.run("readwrite",st=>st.delete(id)); }
+};
+function mergeProg(a,b){
+  const resetAt=Math.max(a.progResetAt||0,b.progResetAt||0), prog={};
+  for(const src of [a.prog||{},b.prog||{}]) for(const [k,v] of Object.entries(src)){
+    if(!v||(v.at||0)<resetAt) continue;
+    if(!prog[k]||(v.at||0)>(prog[k].at||0)) prog[k]=v;
+  }
+  return {prog,resetAt};
+}
+const saveTimers=new Map();
+const plain=s=>{ const {example,...rest}=s; return JSON.parse(JSON.stringify(rest)); };
+function saveScript(s, delay=400){
+  if(s.example) return;
+  s.updatedAt=Date.now();
+  clearTimeout(saveTimers.get(s.id));
+  saveTimers.set(s.id,setTimeout(async()=>{
+    saveTimers.delete(s.id);
+    try{ await idb.put(plain(s)); }
+    catch(e){ toast(e&&e.name==="QuotaExceededError"? "기기 저장 공간이 부족해요. 안 쓰는 대본을 지워 주세요." : "이 기기에 저장하지 못했어요."); }
+  },delay));
+}
+async function deleteScript(s){
+  S.scripts=S.scripts.filter(x=>x.id!==s.id);
+  clearTimeout(saveTimers.get(s.id)); saveTimers.delete(s.id);
+  try{ await idb.del(s.id); }catch(e){ toast("지우지 못했어요."); }
+  recs.clearScript(s.id);
+}
+async function initApp(){
+  try{ S.scripts=(await idb.all())||[]; S.storage="local"; }
+  catch(e){ S.scripts=[]; S.storage="none"; S.loadNote="이 브라우저는 기기 저장을 막고 있어요(사생활 보호 모드 등). 대본이 저장되지 않아요."; }
+  try{ navigator.storage&&navigator.storage.persist&&navigator.storage.persist(); }catch(e){}
+  dict=makeDictation(); setupAI(); render();
+}
+
+/* backup file: everything except recordings unless asked */
+async function exportBackup(withRecs){
+  const data={app:"daebon",v:1,exportedAt:new Date().toISOString(),scripts:S.scripts.map(plain),recordings:{}};
+  if(withRecs){ for(const k of recs.keys){ const b=await recs.getKey(k); if(b) data.recordings[k]={type:b.type||"audio/webm",data:await blobToB64(b)}; } }
+  const name=`대본연습실-백업-${new Date().toISOString().slice(0,10)}.json`;
+  const file=new File([JSON.stringify(data)],name,{type:"application/json"});
+  try{ if(navigator.canShare&&navigator.canShare({files:[file]})&&/Android|iPhone|iPad/i.test(navigator.userAgent)){ await navigator.share({files:[file],title:name}); return; } }catch(e){ if(e&&e.name==="AbortError") return; }
+  const a=document.createElement("a"); a.href=URL.createObjectURL(file); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },2000);
+  toast("백업 파일을 저장했어요. 다른 기기에서 '백업 불러오기'로 여세요.");
+}
+const blobToB64=b=>new Promise(res=>{ const r=new FileReader(); r.onload=()=>res(String(r.result).split(",")[1]||""); r.onerror=()=>res(""); r.readAsDataURL(b); });
+function b64ToBlob(d,type){ const bin=atob(d); const u=new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return new Blob([u],{type}); }
+async function importBackup(file){
+  let data; try{ data=JSON.parse(await file.text()); }catch(e){ toast("백업 파일을 읽지 못했어요."); return; }
+  if(!data||data.app!=="daebon"||!Array.isArray(data.scripts)){ toast("대본 연습실 백업 파일이 아니에요."); return; }
+  let added=0, updated=0;
+  for(const inc of data.scripts){
+    if(!inc||!inc.id||!Array.isArray(inc.lines)) continue;
+    const local=S.scripts.find(x=>x.id===inc.id);
+    if(!local){ S.scripts.push(inc); await idb.put(inc).catch(()=>{}); added++; continue; }
+    // newer copy wins for the script; progress is merged line by line either way
+    const merged=mergeProg(local,inc);
+    const base=(inc.updatedAt||0)>(local.updatedAt||0)? inc : local;
+    Object.assign(local,base,{prog:merged.prog,progResetAt:merged.resetAt});
+    await idb.put(plain(local)).catch(()=>{}); updated++;
+  }
+  let nrec=0; for(const [k,v] of Object.entries(data.recordings||{})){ try{ const [sid,i]=k.split(":"); await recs.put(sid,Number(i),b64ToBlob(v.data,v.type)); nrec++; }catch(e){} }
+  render(); toast(`백업을 불러왔어요. 새 대본 ${added}개, 합친 대본 ${updated}개${nrec?`, 녹음 ${nrec}개`:""}.`);
+}
+
+/* =========================================================
+   AI: 키 없이(ChatGPT·제미나이 앱에 붙여넣기) · 제미나이 API · ChatGPT API
+   Every mode exposes the same tiny interface the analysis code uses:
+     sample(prompt,{images,signal}) → {text},  sample.json(prompt,{signal}) → value
+   ========================================================= */
+const AI_KEY="daebon-ai";
+function aiSettings(){ try{ return Object.assign({mode:"manual",geminiKey:"",geminiModel:"",openaiKey:"",openaiModel:""},JSON.parse(localStorage.getItem(AI_KEY)||"{}")); }catch(e){ return {mode:"manual"}; } }
+function saveAISettings(a){ try{ localStorage.setItem(AI_KEY,JSON.stringify(a)); }catch(e){} setupAI(); }
+const DEFAULT_MODEL={gemini:"gemini-2.5-flash",openai:"gpt-5-mini"};
+let aiManual=false;
+function parseJSONLoose(text){
+  let t=String(text||"").trim();
+  const fence=t.match(/```(?:json)?\s*([\s\S]*?)```/i); if(fence) t=fence[1].trim();
+  try{ return JSON.parse(t); }catch(e){}
+  const a=Math.min(...["{","["].map(c=>{ const i=t.indexOf(c); return i<0?Infinity:i; }));
+  const b=Math.max(t.lastIndexOf("}"),t.lastIndexOf("]"));
+  if(a<Infinity&&b>a){ try{ return JSON.parse(t.slice(a,b+1)); }catch(e){} }
+  throw {code:"invalid_json",message:"JSON을 찾지 못했어요",text};
+}
+async function httpErr(r,who){
+  let msg=""; try{ const j=await r.json(); msg=(j.error&&(j.error.message||j.error.status))||""; }catch(e){}
+  if(r.status===401||r.status===403||/API[ _]?key/i.test(msg)) return {code:"bad_key",message:`${who} API 키가 맞지 않거나 권한이 없어요. ${msg}`};
+  if(r.status===429) return {code:"rate_limited",message:`${who} 사용 한도에 걸렸어요. ${msg}`};
+  if(r.status===404||/model/i.test(msg)&&r.status===400) return {code:"bad_model",message:`${who} 모델 이름을 찾지 못했어요. 설정에서 '연결 확인'을 눌러 주세요. ${msg}`};
+  return {code:"upstream_error",message:`${who} 오류 (${r.status}) ${msg}`};
+}
+function makeGemini(key,model){
+  const call=async(prompt,o={},json)=>{
+    const parts=[{text:prompt}];
+    for(const img of [].concat(o.images||[])) parts.push({inline_data:{mime_type:img.type||"image/jpeg",data:await blobToB64(img)}});
+    let r;
+    try{ r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,{method:"POST",signal:o.signal,
+      headers:{"Content-Type":"application/json","x-goog-api-key":key},
+      body:JSON.stringify({contents:[{role:"user",parts}],generationConfig:json?{responseMimeType:"application/json"}:{}})}); }
+    catch(e){ throw e&&e.name==="AbortError"? {code:"cancelled"} : {code:"upstream_error",message:"인터넷 연결을 확인해 주세요."}; }
+    if(!r.ok) throw await httpErr(r,"제미나이");
+    const j=await r.json(); const c=j.candidates&&j.candidates[0];
+    if(!c){ throw {code:"refused",message:"제미나이가 이 내용에 답하지 않았어요."}; }
+    const text=((c.content&&c.content.parts)||[]).map(p=>p.text||"").join("");
+    if(!text.trim()) throw {code:c.finishReason==="SAFETY"?"refused":"empty_completion",message:"제미나이가 빈 답을 보냈어요."};
+    return {text,truncated:c.finishReason==="MAX_TOKENS"};
+  };
+  const f=(p,o)=>call(p,o,false); f.json=async(p,o)=>{ const r=await call(p,o,true); return parseJSONLoose(r.text); }; f.images=true; return f;
+}
+function makeOpenAI(key,model){
+  const call=async(prompt,o={},json)=>{
+    const content=[{type:"text",text:prompt}];
+    for(const img of [].concat(o.images||[])) content.push({type:"image_url",image_url:{url:`data:${img.type||"image/jpeg"};base64,${await blobToB64(img)}`}});
+    let r;
+    try{ r=await fetch("https://api.openai.com/v1/chat/completions",{method:"POST",signal:o.signal,
+      headers:{"Content-Type":"application/json","Authorization":"Bearer "+key},
+      body:JSON.stringify({model,messages:[{role:"user",content}],...(json?{response_format:{type:"json_object"}}:{})})}); }
+    catch(e){ throw e&&e.name==="AbortError"? {code:"cancelled"} : {code:"upstream_error",message:"인터넷 연결을 확인해 주세요."}; }
+    if(!r.ok) throw await httpErr(r,"ChatGPT");
+    const j=await r.json(); const c=j.choices&&j.choices[0];
+    const text=c&&c.message&&c.message.content||"";
+    if(c&&c.message&&c.message.refusal) throw {code:"refused",message:"ChatGPT가 이 내용에 답하지 않았어요."};
+    if(!text.trim()) throw {code:"empty_completion",message:"ChatGPT가 빈 답을 보냈어요."};
+    return {text,truncated:c.finish_reason==="length"};
+  };
+  // json_object needs a top-level object: wrap requests that expect an array
+  const f=(p,o)=>call(p,o,false);
+  f.json=async(p,o)=>{ const r=await call(p+"\n\n(답은 반드시 JSON 객체 하나로. 배열을 답해야 하면 {\"items\": [...]} 로 감싸라.)",o,true); const v=parseJSONLoose(r.text); return v&&Array.isArray(v.items)&&Object.keys(v).length===1? v.items : v; };
+  f.images=true; return f;
+}
+/* 키 없이: show the question, the person pastes it into ChatGPT/Gemini and pastes the answer back */
+function makeManual(){
+  const f=async(p,o)=>({text:await manualAsk(p,o,false),truncated:false});
+  f.json=async(p,o)=>parseJSONLoose(await manualAsk(p,o,true));
+  f.images=false; return f;
+}
+let manualState=null;
+function manualAsk(prompt,o={},json){
+  return new Promise((resolve,reject)=>{
+    const q=prompt+(json?"\n\n(설명 없이 JSON만 답해 주세요. 코드 블록 하나로 감싸도 됩니다.)":"");
+    manualState={q,resolve,reject,json,label:(S.job&&S.job.label)||(S.add&&S.add.reading&&S.add.reading.note)||S.manualLabel||"AI 분석",err:""};
+    const onAbort=()=>{ closeManual(); reject({code:"cancelled"}); };
+    if(o.signal){ if(o.signal.aborted) return onAbort(); o.signal.addEventListener("abort",onAbort,{once:true}); manualState.off=()=>o.signal.removeEventListener("abort",onAbort); }
+    drawManual();
+  });
+}
+function closeManual(){ const el=document.getElementById("manualSheet"); el.hidden=true; el.innerHTML=""; if(manualState&&manualState.off) manualState.off(); manualState=null; }
+function drawManual(){
+  const M=manualState, el=document.getElementById("manualSheet"); if(!M) return;
+  const step=S.job? `${S.job.done+1}/${S.job.total}` : "";
+  el.innerHTML=`<div class="box" role="dialog" aria-modal="true" aria-labelledby="mTitle">
+    <div class="row between"><h2 id="mTitle">${esc(M.label)} ${step?`<span class="small muted score">${step}</span>`:""}</h2><button class="ghost" data-m="cancel">멈추기</button></div>
+    <ol class="steps"><li><b>질문 복사</b>를 누르세요.</li><li>ChatGPT나 제미나이 앱(무료 계정도 돼요)에 붙여 넣고 보내세요.</li><li>AI의 답 전체를 복사해서 아래 칸에 붙여 넣고 <b>적용</b>을 누르세요.</li></ol>
+    <div class="row"><button class="primary" data-m="copy">질문 복사 (${Math.round(M.q.length/1000)}천 자)</button>
+      <a class="btnlink" href="https://chatgpt.com/" target="_blank" rel="noopener">ChatGPT 열기</a><a class="btnlink" href="https://gemini.google.com/app" target="_blank" rel="noopener">제미나이 열기</a></div>
+    <details><summary>질문 내용 보기</summary><textarea id="mQ" readonly style="margin-top:8px">${esc(M.q)}</textarea></details>
+    <label class="label" for="mA">AI 답 붙여넣기</label>
+    <textarea id="mA" placeholder="여기에 AI의 답을 붙여 넣으세요"></textarea>
+    ${M.err?`<div class="notice warn">${esc(M.err)}</div>`:""}
+    <div class="row"><button class="primary" data-m="apply">적용</button><span class="small muted">답이 중간에 끊겼다면 AI에게 "계속"이라고 보낸 뒤 이어진 답까지 함께 붙여 넣으세요.</span></div>
+  </div>`;
+  el.hidden=false;
+}
+document.getElementById("manualSheet").addEventListener("click",async e=>{
+  const b=e.target.closest("[data-m]"); const M=manualState; if(!b||!M) return;
+  if(b.dataset.m==="copy"){
+    try{ await navigator.clipboard.writeText(M.q); toast("질문을 복사했어요. AI 앱에 붙여 넣으세요."); }
+    catch(_){ const d=document.querySelector("#manualSheet details"); d.open=true; const ta=document.getElementById("mQ"); ta.focus(); ta.select(); toast("자동 복사가 막혔어요. 선택된 질문을 직접 복사해 주세요."); }
+  } else if(b.dataset.m==="apply"){
+    const ans=document.getElementById("mA").value.trim(); if(!ans){ M.err="AI 답을 붙여 넣어 주세요."; drawManual(); return; }
+    if(M.json){ try{ parseJSONLoose(ans); }catch(_){ M.err="답에서 JSON을 찾지 못했어요. AI 답 전체(중괄호 { } 까지)를 붙여 넣었는지 확인해 주세요."; const keep=ans; drawManual(); document.getElementById("mA").value=keep; return; } }
+    const res=M.resolve; closeManual(); res(ans);
+  } else if(b.dataset.m==="cancel"){ const rej=M.reject; closeManual(); rej({code:"cancelled"}); }
+});
+function setupAI(){
+  const a=aiSettings();
+  if(window.__mockAI){ sample=window.__mockAI; aiManual=false; canImages=false; return; }
+  if(a.mode==="gemini"&&a.geminiKey){ sample=makeGemini(a.geminiKey,a.geminiModel||DEFAULT_MODEL.gemini); aiManual=false; }
+  else if(a.mode==="openai"&&a.openaiKey){ sample=makeOpenAI(a.openaiKey,a.openaiModel||DEFAULT_MODEL.openai); aiManual=false; }
+  else { sample=makeManual(); aiManual=true; }
+  canImages=!!sample.images;
+}
+const aiName=()=>{ const a=aiSettings(); return aiManual? "키 없이(AI 앱에 붙여넣기)" : a.mode==="gemini"? "제미나이 API" : "ChatGPT API"; };
+/* '연결 확인': checks the key and picks a current model from the provider's own list */
+async function checkAI(mode,key){
+  if(!key) throw {message:"API 키를 넣어 주세요."};
+  if(mode==="gemini"){
+    const r=await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=200",{headers:{"x-goog-api-key":key}});
+    if(!r.ok) throw await httpErr(r,"제미나이");
+    const ms=((await r.json()).models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes("generateContent")).map(m=>m.name.replace(/^models\//,""));
+    const ver=n=>{ const v=n.match(/gemini-(\d+(?:\.\d+)?)/); return v?Number(v[1]):0; };
+    const ok=ms.filter(n=>/^gemini-[\d.]+-flash$/.test(n)||/^gemini-[\d.]+-flash-latest$/.test(n)||/^gemini-flash-latest$/.test(n));
+    const pick=(ok.length?ok:ms.filter(n=>/flash/.test(n)&&!/lite|image|tts|audio|live|exp|preview/.test(n))).sort((a,b)=>ver(b)-ver(a))[0]||ms[0];
+    return {model:pick,models:ms};
+  } else {
+    const r=await fetch("https://api.openai.com/v1/models",{headers:{"Authorization":"Bearer "+key}});
+    if(!r.ok) throw await httpErr(r,"ChatGPT");
+    const ms=((await r.json()).data||[]).map(m=>m.id);
+    const ver=n=>{ const v=n.match(/gpt-(\d+(?:\.\d+)?)/); return v?Number(v[1]):0; };
+    const mini=ms.filter(n=>/^gpt-[\d.]+-mini$/.test(n)).sort((a,b)=>ver(b)-ver(a));
+    const pick=mini[0]||ms.filter(n=>/^gpt-4o-mini$/.test(n))[0]||ms.filter(n=>/^gpt-/.test(n))[0];
+    return {model:pick,models:ms};
+  }
+}
+
+/* =========================================================
+   Recordings (this device only, IndexedDB)
+   ========================================================= */
+const recs={
+  db:null, keys:new Set(),
+  async open(){ if(this.db) return this.db; return new Promise(res=>{ try{ const r=indexedDB.open("sp-recs",1); r.onupgradeneeded=()=>r.result.createObjectStore("recs"); r.onsuccess=()=>{this.db=r.result;res(this.db);}; r.onerror=()=>res(null);}catch(e){res(null);} }); },
+  async tx(mode,fn){ const d=await this.open(); if(!d) return null; return new Promise(res=>{ try{ const t=d.transaction("recs",mode); const rq=fn(t.objectStore("recs")); t.oncomplete=()=>res(rq&&rq.result); t.onerror=()=>res(null);}catch(e){res(null);} }); },
+  async load(){ const k=await this.tx("readonly",st=>st.getAllKeys()); this.keys=new Set(k||[]); },
+  has(sid,i){ return this.keys.has(sid+":"+i); },
+  get(sid,i){ return this.tx("readonly",st=>st.get(sid+":"+i)); },
+  getKey(k){ return this.tx("readonly",st=>st.get(k)); },
+  async put(sid,i,blob){ await this.tx("readwrite",st=>st.put(blob,sid+":"+i)); this.keys.add(sid+":"+i); },
+  async del(sid,i){ await this.tx("readwrite",st=>st.delete(sid+":"+i)); this.keys.delete(sid+":"+i); },
+  async clearScript(sid){ for(const k of [...this.keys]) if(k.startsWith(sid+":")){ await this.tx("readwrite",st=>st.delete(k)); this.keys.delete(k);} }
+};
+let recTarget=null;
+document.getElementById("recInput").addEventListener("change", async e=>{
+  const f=e.target.files&&e.target.files[0]; e.target.value="";
+  if(!f||!recTarget) return;
+  await recs.put(recTarget.sid, recTarget.i, f);
+  toast(recs.has(recTarget.sid,recTarget.i)?"녹음을 이 기기에 저장했어요.":"녹음을 저장하지 못했어요.");
+  render();
+});
+
+/* =========================================================
+   Voice
+   ========================================================= */
+let speakTok=0, curAudio=null;
+const VOICES=["airy","rounded","glassy","buttery"];
+function voiceIdx(s, role){ const rs=rolesOf(s.lines).map(x=>x.r).filter(r=>r!==s.myRole); return Math.max(0,rs.indexOf(role)); }
+function stopSpeech(){ speakTok++; try{ tts&&tts.stop(); }catch(e){} try{ window.speechSynthesis&&speechSynthesis.cancel(); }catch(e){} if(curAudio){ curAudio.pause(); curAudio=null; } }
+async function playBlob(blob,tok){ const url=URL.createObjectURL(blob); curAudio=new Audio(url); curAudio.playbackRate=S.settings.rate; await new Promise(res=>{ curAudio.onended=curAudio.onerror=res; curAudio.play().catch(res); }); URL.revokeObjectURL(url); return tok===speakTok; }
+async function speakLine(s, i){
+  stopSpeech(); const tok=speakTok; const l=s.lines[i];
+  if(!s.example && recs.has(s.id,i)){ const blob=await recs.get(s.id,i); if(blob&&tok===speakTok) return playBlob(blob,tok); }
+  const text=speechOnly(l.t); if(!text) return tok===speakTok;
+  const vi=voiceIdx(s,l.r);
+  if(tts){
+    try{ await tts.speak(text.slice(0,1900),{voice:VOICES[vi%VOICES.length], rate:S.settings.rate, language:"ko"}); return tok===speakTok; }
+    catch(e){ if(tok!==speakTok) return false; if(["not_granted","unavailable","capability_disabled","not_declared"].includes(e&&e.code)) tts=null; else if(e&&e.code!=="busy"&&e.code!=="rate_limited") return false; }
+  }
+  if("speechSynthesis" in window){
+    await new Promise(res=>{ try{ const u=new SpeechSynthesisUtterance(text); u.lang="ko-KR"; u.rate=S.settings.rate; u.pitch=[1,0.8,1.2,0.95][vi%4];
+      const v=speechSynthesis.getVoices().find(v=>/^ko/i.test(v.lang)); if(v) u.voice=v; u.onend=u.onerror=res; speechSynthesis.speak(u);
+      setTimeout(res, 1500+text.length*260/S.settings.rate); }catch(e){res();} });
+    return tok===speakTok;
+  }
+  return false;
+}
+try{ window.speechSynthesis && speechSynthesis.getVoices(); }catch(e){}
+
+/* =========================================================
+   Progress
+   ========================================================= */
+function myIdx(s, sec){ const a=sec?sec.start:0, b=sec?sec.end:s.lines.length; const out=[]; for(let i=a;i<b;i++){ const l=s.lines[i]; if(l.k==="line"&&l.r===s.myRole) out.push(i);} return out; }
+function status(s,i){ const p=(s.prog||{})[i]; if(!p) return "new"; if(p.last==="ok"&&p.ok>=2) return "ok"; if(p.last==="ng") return "ng"; return "mid"; }
+function mastery(s,sec){ const m=myIdx(s,sec); if(!m.length) return 0; return Math.round(m.filter(i=>status(s,i)==="ok").length/m.length*100); }
+function mark(s,i,ok){ s.prog=s.prog||{}; const p=s.prog[i]||{ok:0,ng:0}; if(ok) p.ok++; else p.ng++; p.last=ok?"ok":"ng"; p.at=Date.now(); s.prog[i]=p; s.lastRun=Date.now(); if(!s.example) saveScript(s,1500); }
+
+/* =========================================================
+   AI analysis (whichever AI is set: API key or copy-paste)
+   ========================================================= */
+function aiErrMsg(e){
+  const c=e&&e.code;
+  if(c==="bad_key"||c==="bad_model") return e.message;
+  if(c==="invalid_json") return "AI 답에서 결과(JSON)를 찾지 못했어요. 다시 시도해 주세요.";
+  if(c==="rate_limited"&&e.message) return e.message;
+  if(c==="cancelled") return "멈췄어요.";
+  if(c==="not_granted"||c==="sampling_disabled"){ sample=null; return "AI 사용이 허용되지 않았어요."; }
+  if(c==="rate_limited") return "AI 사용량이 많아요. 잠시 후 다시 해 주세요.";
+  if(c==="prompt_too_large") return "한 번에 보내기엔 너무 길어요.";
+  if(c==="refused") return "AI가 이 부분을 분석하지 않았어요.";
+  return "AI 분석 중 문제가 생겼어요. 다시 시도해 주세요.";
+}
+const lineStr=(s,i)=>{ const l=s.lines[i]; return `[${i}] `+(l.k==="line"?`${l.r}: ${l.t}`:l.t); };
+function rangeText(s,a,b,max){ let out="", n=0; for(let i=a;i<b;i++){ const t=lineStr(s,i)+"\n"; if(n+t.length>max) break; out+=t; n+=t.length; } return out; }
+function workChunks(s, max=16000){
+  const secs=sectionsOf(s), chunks=[]; let cur=null;
+  const size=(a,b)=>{ let n=0; for(let i=a;i<b;i++) n+=s.lines[i].t.length+12; return n; };
+  for(const x of secs){
+    const n=size(x.start,x.end);
+    if(n>max){
+      if(cur){ chunks.push(cur); cur=null; }
+      let a=x.start, acc=0;
+      for(let i=x.start;i<x.end;i++){ acc+=s.lines[i].t.length+12; if(acc>max){ chunks.push({from:a,to:i,starts:a===x.start?[x.start]:[]}); a=i; acc=0; } }
+      chunks.push({from:a,to:x.end,starts:a===x.start?[x.start]:[]});
+      continue;
+    }
+    if(cur && size(cur.from,x.end)>max){ chunks.push(cur); cur=null; }
+    if(!cur) cur={from:x.start,to:x.end,starts:[x.start]}; else { cur.to=x.end; cur.starts.push(x.start); }
+  }
+  if(cur) chunks.push(cur);
+  return chunks;
+}
+function startJob(s,label,total){ const j={sid:s.id,label,done:0,total,ctl:new AbortController()}; S.job=j; render(); return j; }
+function endJob(){ S.job=null; render(); }
+
+async function analyzeWork(s, job){
+  const marked=s.lines.some(l=>l.k==="act"||l.k==="scene");
+  if(!marked) s.aiSections=null;
+  const chunks=workChunks(s, aiManual?60000:16000);
+  job.label="막·장 나누고 장면 읽는 중"; job.done=0; job.total=chunks.length+1; render();
+  const scenes={}, rel=[], beats=[], aiStarts=[];
+  for(let c=0;c<chunks.length;c++){
+    const ch=chunks[c];
+    const segInfo= marked
+      ? `이 부분에 있는 장면의 시작 줄 번호: ${ch.starts.length?ch.starts.join(", "):"(앞 장면에서 이어짐 — scenes는 비워라)"}. scenes의 i는 반드시 이 번호 중 하나.`
+      : `이 대본에는 막·장 표시가 없다. 장소·시간이 바뀌거나 등장인물이 크게 바뀌는 지점을 장면 경계로 보고, 이 부분에서 새 장면이 시작되는 줄 번호를 scenes의 i로 적어라.${c===0?` 첫 장면은 ${ch.from}번 줄에서 시작한다.`:` 이 부분 첫 줄(${ch.from})이 앞 장면에서 이어지는 중이면 그 번호는 넣지 마라.`}`;
+    const prompt=`너는 연극 드라마투르그다. 아래는 연극 대본 "${s.title}"의 일부(줄 ${ch.from}~${ch.to-1})다. 고전 번역극일 수도, 창작극일 수도 있다.
+${segInfo}
+${aliasNote(s)}JSON 하나로만 답하라:
+{"scenes":[{"i":장면 시작 줄 번호,"title":"6~14자 장면 제목","event":"이 장면의 핵심 사건 1~2문장","chars":["등장인물"]}],
+ "rel":[{"a":"인물","b":"인물","what":"이 부분에서 둘 사이에 일어난 일 한 문장","i":근거가 되는 대사 줄 번호}],
+ "beats":[{"name":"인물","i":장면 시작 줄 번호,"want":"이 장면에서 원하는 것","emotion":"감정 한두 단어","level":-5부터 5 사이 정수(매우 괴로움 -5, 평온 0, 매우 기쁨 5)}]}
+rel은 중요한 것만 최대 12개, beats는 대사가 있는 주요 인물만. 인물 이름은 대사 앞에 표기된 이름(${rolesOf(s.lines).slice(0,25).map(x=>x.r).join(", ")})으로 통일하고, 애칭·호칭으로 바꿔 쓰지 마라.
+
+대본:
+${rangeText(s,ch.from,ch.to,aiManual?66000:60000)}`;
+    const res=await sample.json(prompt,{signal:job.ctl.signal});
+    const valid=new Set(marked?ch.starts:[]);
+    for(const x of arr(res&&res.scenes)){ if(!x||typeof x!=="object") continue;
+      let i=Number(x.i); if(!Number.isFinite(i)) continue;
+      if(marked){ if(!valid.has(i)) continue; } else { if(i<ch.from||i>=ch.to) continue; if(c===0&&!aiStarts.length) i=0; aiStarts.push({start:i,title:String(x.title||"")}); }
+      scenes[i]={title:String(x.title||"").slice(0,30),event:String(x.event||""),chars:[...new Set((Array.isArray(x.chars)?x.chars:[]).map(n=>canonName(s,n)))].slice(0,20)};
+    }
+    for(const x of arr(res&&res.rel)){ if(!x||typeof x!=="object") continue; const i=Number(x.i), a=canonName(s,x.a), b=canonName(s,x.b); if(a&&b&&a!==b) rel.push({a,b,what:String(x.what||""),i:Number.isFinite(i)&&i>=0&&i<s.lines.length?i:null}); }
+    for(const x of arr(res&&res.beats)){ if(!x||typeof x!=="object") continue; const i=Number(x.i); if(x.name) beats.push({name:canonName(s,x.name),i:Number.isFinite(i)?i:ch.from,want:String(x.want||""),emotion:String(x.emotion||""),level:Math.max(-5,Math.min(5,Math.round(Number(x.level)||0)))}); }
+    job.done=c+1; render();
+  }
+  if(!marked){ aiStarts.sort((a,b)=>a.start-b.start); const seen=new Set(); s.aiSections=aiStarts.filter(x=>!seen.has(x.start)&&seen.add(x.start)); if(!s.aiSections.length) s.aiSections=[{start:0,title:"전체"}]; }
+  const secs=sectionsOf(s);
+  // snap beats to their section start
+  beats.forEach(b=>{ const sec=secOfLine(s,b.i)||secs[0]; b.i=sec.start; });
+  job.label="작품 전체를 정리하는 중"; render();
+  const counts=rolesOf(s.lines).slice(0,30).map(x=>`${x.r}(${x.n})`).join(", ");
+  const secList=secs.map(x=>`- 줄 ${x.start} [${x.label}] ${scenes[x.start]?scenes[x.start].title+": "+scenes[x.start].event:""}`).join("\n");
+  const relList=rel.slice(0,80).map(r=>`- ${r.a}↔${r.b}: ${r.what} (줄 ${r.i})`).join("\n");
+  const synth=await sample.json(`너는 연극 드라마투르그다. 아래는 연극 "${s.title}"의 장면별 요약과 인물 관계 단서다. 배우가 작품을 이해하도록 분석하라.
+인물(대사 수): ${counts}
+${aliasNote(s)}장면 목록:
+${secList}
+관계 단서:
+${relList}
+
+JSON 하나로만 답하라:
+{"logline":"작품 한 문장 요약","summary":"줄거리 5~8문장","theme":"주제 1~2문장","conflict":"중심 갈등 1~2문장",
+ "arc":[{"stage":"기","text":"작품 전체에서 이 단계에 해당하는 흐름 1문장"},{"stage":"승","text":"…"},{"stage":"전","text":"…"},{"stage":"결","text":"…"}],
+ "stages":{"장면 시작 줄 번호":"기|승|전|결"}  ← 위 장면 목록의 모든 장면에 대해, 순서상 기→승→전→결이 거꾸로 가지 않게,
+ "turning":[결정적 전환점이 되는 장면 시작 줄 번호 1~3개],
+ "chars":[{"name":"인물","role":"주인공/적대자/조력자/주변 인물 등","desc":"한 문장"}]  ← 주요 인물 최대 14명,
+ "rel":[{"a":"인물","b":"인물","label":"2~6자 관계 이름","desc":"관계와 그 변화 1~2문장","i":근거 줄 번호}]  ← 최대 20개}`,{signal:job.ctl.signal});
+  const starts=new Set(secs.map(x=>String(x.start)));
+  const stages={}; for(const [k,v] of Object.entries((synth&&synth.stages)||{})) if(starts.has(String(Number(k)))&&STAGES.includes(v)) stages[Number(k)]=v;
+  s.analysis={v:1,at:Date.now(),
+    logline:String(synth.logline||""),summary:String(synth.summary||""),theme:String(synth.theme||""),conflict:String(synth.conflict||""),
+    arc:(Array.isArray(synth.arc)?synth.arc:[]).filter(x=>STAGES.includes(x.stage)).map(x=>({stage:x.stage,text:String(x.text||"")})),
+    stages, turning:(Array.isArray(synth.turning)?synth.turning:[]).map(Number).filter(n=>starts.has(String(n))),
+    scenes, beats,
+    chars:(Array.isArray(synth.chars)?synth.chars:[]).filter(x=>x&&x.name).map(x=>({name:canonName(s,x.name),role:String(x.role||""),desc:String(x.desc||"")})).filter((x,k,arr)=>arr.findIndex(y=>y.name===x.name)===k).slice(0,16),
+    rel:(Array.isArray(synth.rel)?synth.rel:[]).filter(x=>x&&x.a&&x.b&&canonName(s,x.a)!==canonName(s,x.b)).map(x=>({a:canonName(s,x.a),b:canonName(s,x.b),label:String(x.label||""),desc:String(x.desc||""),i:Number.isFinite(Number(x.i))&&Number(x.i)>=0&&Number(x.i)<s.lines.length?Number(x.i):null})).slice(0,24)};
+  job.done=job.total; saveScript(s,0); render();
+}
+
+async function analyzeChar(s, name, job){
+  const A=s.analysis||{}; const secs=sectionsOf(s);
+  job.label=`${name} 인물 분석 중`; job.done=0; job.total=1; render();
+  const idx=s.lines.map((l,i)=>l.k==="line"&&l.r===name?i:-1).filter(i=>i>=0);
+  let pick=idx; const total=idx.reduce((n,i)=>n+s.lines[i].t.length,0);
+  if(total>22000){ const step=total/22000; pick=idx.filter((_,k)=>k%Math.ceil(step)===0); }
+  const linesTxt=pick.map(i=>{ const sec=secOfLine(s,i); return `[${i}] (${sec?sec.short:""}) ${s.lines[i].t}`; }).join("\n").slice(0,70000);
+  const secList=secs.map(x=>`- 줄 ${x.start} [${x.short} ${x.label}] ${A.stages&&A.stages[x.start]||""} ${A.scenes&&A.scenes[x.start]?A.scenes[x.start].event:""}`).join("\n");
+  const beats=(A.beats||[]).filter(b=>b.name===name).map(b=>`- 줄 ${b.i}: 원함 "${b.want}", 감정 ${b.emotion} (${b.level})`).join("\n");
+  const rels=(A.rel||[]).filter(r=>r.a===name||r.b===name).map(r=>`- ${r.a}↔${r.b} ${r.label}: ${r.desc}`).join("\n");
+  const res=await sample.json(`너는 배우와 함께 인물을 분석하는 연기 코치다. 연극 "${s.title}"의 인물 "${name}"을 분석하라.
+작품 요약: ${A.summary||"(없음)"}
+${aliasNote(s)}
+장면 목록(시작 줄, 단계, 사건):
+${secList}
+장면별 상태 단서:
+${beats||"(없음)"}
+관계 단서:
+${rels||"(없음)"}
+${name}의 대사(줄 번호, 장면):
+${linesTxt}
+
+JSON 하나로만 답하라:
+{"summary":"인물을 설명하는 한 문단(3~4문장)","want":"작품 전체에서 궁극적으로 원하는 것","obstacle":"그것을 가로막는 것","flaw":"약점이나 내면의 모순",
+ "arc":[{"i":장면 시작 줄 번호,"emotion":"감정 한두 단어","level":-5~5 정수,"note":"이 장면에서 인물의 상태 한 문장"}]  ← ${name}이 나오는 장면마다, 순서대로,
+ "speech":"말투와 대사 습관 1~2문장",
+ "points":["연기할 때 붙잡을 포인트 한 문장", … 4~6개],
+ "rels":[{"with":"인물","label":"관계 이름","change":"관계가 어떻게 변하는지 한 문장"}],
+ "quotes":[{"i":줄 번호,"why":"이 대사가 인물을 보여 주는 이유 한 문장"}]  ← 3~5개, 반드시 위 대사 줄 번호 중에서}`,{signal:job.ctl.signal});
+  const starts=new Set(secs.map(x=>x.start)), mine=new Set(idx);
+  s.chars=s.chars||{};
+  s.chars[name]={at:Date.now(),
+    summary:String(res.summary||""),want:String(res.want||""),obstacle:String(res.obstacle||""),flaw:String(res.flaw||""),
+    arc:(Array.isArray(res.arc)?res.arc:[]).map(x=>({i:Number(x.i),emotion:String(x.emotion||""),level:Math.max(-5,Math.min(5,Math.round(Number(x.level)||0))),note:String(x.note||"")})).filter(x=>starts.has(x.i)).sort((a,b)=>a.i-b.i),
+    speech:String(res.speech||""),points:(Array.isArray(res.points)?res.points:[]).map(String).slice(0,6),
+    rels:(Array.isArray(res.rels)?res.rels:[]).filter(x=>x&&x.with&&canonName(s,x.with)!==name).map(x=>({with:canonName(s,x.with),label:String(x.label||""),change:String(x.change||"")})).slice(0,10),
+    quotes:(Array.isArray(res.quotes)?res.quotes:[]).map(x=>({i:Number(x.i),why:String(x.why||"")})).filter(x=>mine.has(x.i)).slice(0,5)};
+  job.done=1; saveScript(s,0); render();
+}
+
+async function analyzeNotes(s, job, onlySec){
+  const secs=onlySec?[onlySec]:sectionsOf(s);
+  if(!s.notes||s.notes.role!==s.myRole) s.notes={role:s.myRole,map:{}};
+  const batches=[];
+  if(aiManual){
+    // one question covers up to 80 of my lines across scenes (fewer copy-pastes)
+    const all=secs.flatMap(x=>myIdx(s,x).filter(i=>!s.notes.map[i]));
+    for(let k=0;k<all.length;k+=80){ const ids=all.slice(k,k+80); batches.push({sec:secOfLine(s,ids[0]),last:secOfLine(s,ids[ids.length-1]),ids}); }
+  } else for(const x of secs){ const m=myIdx(s,x).filter(i=>!s.notes.map[i]); for(let k=0;k<m.length;k+=25) batches.push({sec:x,ids:m.slice(k,k+25)}); }
+  job.label="내 대사 핵심 단어·흐름 설명 만드는 중"; job.done=0; job.total=batches.length; render();
+  const A=s.analysis||{};
+  for(const b of batches){
+    const a=Math.max(b.sec.start,b.ids[0]-40), z=Math.min((b.last||b.sec).end,b.ids[b.ids.length-1]+4);
+    const ev=A.scenes&&A.scenes[b.sec.start]?`이 장면(${b.sec.label})의 사건: ${A.scenes[b.sec.start].event}\n`:"";
+    const prompt=`너는 배우의 대사 암기를 돕는 연기 코치다. 연극 "${s.title}"에서 배우가 맡은 배역은 "${s.myRole}"이다.
+${ev}번호 ${b.ids.join(", ")} 의 ${s.myRole} 대사마다:
+- keys: 장면 흐름상 이 대사의 핵심 단어나 짧은 구절 1~3개. 반드시 그 대사 원문에 글자 그대로 있는 문자열.
+- story: 이 대사가 왜 바로 이 순간에 나오는지, 바로 앞 상대 대사·상황과의 인과를 이야기처럼 이어 1~2문장. "상대가 ~라고 하니까 그래서 ~" 식 연결고리를 주고 핵심 단어를 문장 속에 넣는다. 평서문(~다).
+JSON 하나로만 답하라: {"lines":[{"i":번호,"keys":["…"],"story":"…"}]}
+
+대본:
+${rangeText(s,a,z,aiManual?66000:40000)}`;
+    const res=await sample.json(prompt,{signal:job.ctl.signal});
+    for(const it of arr(res&&res.lines)){ if(!it||typeof it!=="object") continue;
+      const i=Number(it.i); if(!b.ids.includes(i)) continue;
+      const t=s.lines[i].t;
+      s.notes.map[i]={keys:(Array.isArray(it.keys)?it.keys:[]).map(String).map(k=>k.trim()).filter(k=>k&&t.includes(k)).slice(0,3),story:String(it.story||"").trim()};
+    }
+    job.done++; saveScript(s,2000); render();
+  }
+  saveScript(s,0);
+}
+
+async function runPipeline(s, steps){
+  if(!sample){ toast("AI 설정을 먼저 확인해 주세요."); return; }
+  if(S.job){ toast("다른 분석이 진행 중이에요."); return; }
+  const job=startJob(s,"준비 중",1);
+  try{
+    if(steps.includes("work")) await analyzeWork(s,job);
+    if(steps.includes("char")) await analyzeChar(s, steps.charName||s.myRole, job);
+    if(steps.includes("notes")) await analyzeNotes(s,job,steps.sec);
+    toast("분석을 마쳤어요.");
+  }catch(e){ toast(aiErrMsg(e)); saveScript(s,0); }
+  finally{ endJob(); }
+}
+
+/* =========================================================
+   Rehearsal
+   ========================================================= */
+function runSection(s){ return S.runSec==="all"? null : sectionsOf(s).find(x=>String(x.start)===String(S.runSec)) || null; }
+function startRun(s, weakOnly){
+  stopSpeech();
+  const sec=runSection(s), a=sec?sec.start:0, b=sec?sec.end:s.lines.length;
+  let seq=[];
+  if(weakOnly){
+    myIdx(s,sec).filter(i=>status(s,i)!=="ok").forEach(i=>{ let c=i-1; while(c>=a&&!(s.lines[c].k==="line"&&s.lines[c].r!==s.myRole)) c--; if(c>=a&&seq[seq.length-1]!==c) seq.push(c); seq.push(i); });
+  } else for(let i=a;i<b;i++) if(s.lines[i].k==="line") seq.push(i);
+  S.run={seq,pos:0,weakOnly,revealed:false,hint:S.settings.hint,showStory:false,heard:null,listening:false,okN:0,ngN:0,done:!seq.length,sec};
+  S.tab="run"; render(); enterStep();
+  try{ navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>S.wake=l).catch(()=>{}); }catch(e){}
+}
+async function enterStep(){
+  const s=cur(), R=S.run; if(!s||!R||R.done) return;
+  const i=R.seq[R.pos], l=s.lines[i];
+  if(l.r!==s.myRole && S.settings.auto){
+    const pos=R.pos; R.playing=true; render();
+    const finished=await speakLine(s,i);
+    if(S.run===R && R.pos===pos){ R.playing=false; if(finished){ await new Promise(r=>setTimeout(r,350)); if(S.run===R&&R.pos===pos) next(); } else render(); }
+  }
+}
+function next(){ const R=S.run; if(!R) return; stopSpeech(); stopDict(); R.pos++; R.revealed=false; R.showStory=false; R.heard=null; R.hint=S.settings.hint; if(R.pos>=R.seq.length){ R.done=true; render(); return; } render(); enterStep(); }
+function prev(){ const R=S.run; if(!R||R.pos===0) return; stopSpeech(); stopDict(); R.pos--; R.revealed=false; R.heard=null; R.showStory=false; render(); }
+/* device speech recognition (Chrome, Edge, Safari on iPhone) with the same shape the rehearsal code uses */
+function makeDictation(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) return null;
+  let rec=null, state="idle", hp=[], hf=[], hs=[], endRes=null;
+  const emit=(arr,v)=>arr.forEach(f=>{ try{ f(v); }catch(e){} });
+  const setState=(st,reason)=>{ state=st; emit(hs, reason?{state:st,reason}:{state:st}); };
+  return {
+    start(){ return new Promise((res,rej)=>{
+      if(rec){ res(); return; }
+      rec=new SR(); rec.lang="ko-KR"; rec.interimResults=true; rec.continuous=true;
+      let started=false, err=null;
+      rec.onstart=()=>{ started=true; setState("listening"); res(); };
+      rec.onresult=ev=>{ let interim=""; for(let i=ev.resultIndex;i<ev.results.length;i++){ const r=ev.results[i]; if(r.isFinal) emit(hf,{text:" "+r[0].transcript.trim()}); else interim+=r[0].transcript; } emit(hp,{text:interim}); };
+      rec.onerror=ev=>{ err=ev.error; if(!started) rej({code:(ev.error==="not-allowed"||ev.error==="service-not-allowed")?"not_granted":"unavailable"}); };
+      rec.onend=()=>{ rec=null; const reason=(err==="not-allowed"||err==="service-not-allowed")?"not_granted":(err&&err!=="no-speech"&&err!=="aborted")?"upstream_error":"stopped"; setState("idle",reason); if(endRes){ endRes(); endRes=null; } };
+      setState("starting");
+      try{ rec.start(); }catch(e){ rec=null; setState("idle","unavailable"); rej({code:"unavailable"}); }
+    }); },
+    stop(){ return new Promise(res=>{ if(!rec){ res(); return; } endRes=res; setState("finishing"); try{ rec.stop(); }catch(e){ res(); } setTimeout(res,2500); }); },
+    active(){ return state!=="idle"; },
+    onPartial(f){ hp.push(f); return ()=>{ hp=hp.filter(x=>x!==f); }; },
+    onFinal(f){ hf.push(f); return ()=>{ hf=hf.filter(x=>x!==f); }; },
+    onState(f){ hs.push(f); return ()=>{ hs=hs.filter(x=>x!==f); }; }
+  };
+}
+/* in-app voice recording (falls back to the phone's recorder app) */
+let recorder=null;
+function recBtn(s,i,mine){
+  const on=recorder&&recorder.sid===s.id&&recorder.i===i;
+  return `<button class="ghost${on?" recording":""}" data-act="rec" data-i="${i}">${on?"● 녹음 중 · 멈추기":mine?"내 목소리 녹음":"상대 대사 녹음"}</button>`;
+}
+async function toggleRecord(sid,i){
+  if(recorder){ const r=recorder; r.mr.stop(); if(r.sid===sid&&r.i===i) return; await new Promise(res=>setTimeout(res,300)); }
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){ recTarget={sid,i}; document.getElementById("recInput").click(); return; }
+  let stream; try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }catch(e){ toast("마이크를 쓸 수 없어요. 브라우저 설정에서 마이크를 허용해 주세요."); return; }
+  stopSpeech();
+  const mr=new MediaRecorder(stream), chunks=[];
+  mr.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+  mr.onstop=async()=>{ stream.getTracks().forEach(t=>t.stop()); recorder=null; const blob=new Blob(chunks,{type:mr.mimeType||"audio/webm"}); if(blob.size){ await recs.put(sid,i,blob); toast("녹음을 저장했어요."); } rerender(); };
+  recorder={sid,i,mr}; mr.start(); rerender();
+}
+let dictUnsub=[];
+function stopDict(){ if(dict&&S.run&&S.run.listening){ dict.stop().catch(()=>{}); } dictUnsub.forEach(f=>f()); dictUnsub=[]; if(S.run) S.run.listening=false; }
+function startDict(){
+  const R=S.run; if(!dict||!R) return;
+  stopSpeech(); R.heard={text:"",partial:""}; R.listening=true;
+  const p=dict.start({language:"ko"});
+  dictUnsub=[ dict.onFinal(({text})=>{ R.heard.text+=text; renderHeard(); }), dict.onPartial(({text})=>{ R.heard.partial=text; renderHeard(); }),
+    dict.onState(({state,reason})=>{ if(state==="idle"){ R.listening=false; if(reason==="not_granted"||reason==="unavailable"){ dict=null; toast("음성 인식을 쓸 수 없어요."); } R.revealed=true; render(); } }) ];
+  p.catch(e=>{ R.listening=false; if(e&&(e.code==="not_granted"||e.code==="unavailable")){ dict=null; toast("이 화면에서는 음성 인식을 쓸 수 없어요."); } render(); });
+  render();
+}
+async function finishDict(){ const R=S.run; if(!dict||!R) return; await dict.stop().catch(()=>{}); R.listening=false; R.revealed=true; render(); }
+function lcs(a,b){ const n=a.length,m=b.length; if(!n||!m) return 0; let prev=new Array(m+1).fill(0); for(let i=1;i<=n;i++){ const c=[0]; for(let j=1;j<=m;j++) c[j]=a[i-1]===b[j-1]?prev[j-1]+1:Math.max(prev[j],c[j-1]); prev=c; } return prev[m]; }
+function compare(orig, spoken){
+  const a=norm(orig), b=norm(spoken); const score=a.length? Math.round(lcs(a,b)/a.length*100):0;
+  const html=speechOnly(orig).split(/\s+/).filter(Boolean).map(w=>{ const nw=norm(w); return nw && !b.includes(nw.slice(0,Math.max(1,nw.length-1)))? `<span class="miss">${esc(w)}</span>` : esc(w); }).join(" ");
+  return {score, html};
+}
+function renderHeard(){ const el=document.getElementById("heardLive"); if(el&&S.run&&S.run.heard) el.textContent=(S.run.heard.text+" "+(S.run.heard.partial||"")).trim()||"듣고 있어요…"; }
+
+/* =========================================================
+   Views
+   ========================================================= */
+const cur=()=> S.curId==="__example"? EXAMPLE : S.scripts.find(x=>x.id===S.curId);
+const notesFor=(s,i)=> s.notes&&s.notes.role===s.myRole&&s.notes.map? s.notes.map[i] : null;
+const hasNotes=s=> !!(s.notes&&s.notes.role===s.myRole&&Object.keys(s.notes.map||{}).length);
+function render(){
+  if(S.view==="script" && !cur()) S.view="library";
+  const sy=window.scrollY;
+  app.innerHTML = S.view==="add"? viewAdd() : S.view==="settings"? viewSettings() : S.view==="script"? viewScript(cur()) : viewLibrary();
+  if(S.flashI!=null){ const el=document.getElementById("L"+S.flashI); if(el){ el.classList.add("flash"); el.scrollIntoView({block:"center"}); setTimeout(()=>el.classList.remove("flash"),1600);} S.flashI=null; }
+  else if(S._keepScroll) window.scrollTo(0,sy);
+  S._keepScroll=false;
+}
+function rerender(){ S._keepScroll=true; render(); }
+function jobBar(s){ const j=S.job; if(!j||(s&&j.sid!==s.id)) return ""; return `<div class="job"><span class="spinner"></span><span class="grow">${esc(j.label)}… <span class="score">${j.done}/${j.total}</span></span><button class="ghost" data-act="jobstop">멈추기</button></div>`; }
+function storageNote(){
+  if(S.storage==="local") return "대본·분석·진도·녹음은 이 기기에만 저장돼요. 휴대폰과 PC를 오갈 때는 설정의 '백업 파일 저장'과 '백업 불러오기'를 쓰세요.";
+  return "저장소에 연결하는 중…";
+}
+function viewLibrary(){
+  const list=[...S.scripts].sort((a,b)=>Math.max(b.lastRun||0,b.updatedAt||0)-Math.max(a.lastRun||0,a.updatedAt||0));
+  const card=s=>{ const p=mastery(s), n=myIdx(s).length, secs=sectionsOf(s).filter(x=>!x.whole).length; return `<button class="card" data-act="open" data-id="${esc(s.id)}">
+      <div class="grow"><div class="row"><h3>${esc(s.title||"제목 없음")}</h3>${s.example?'<span class="tag plain">예시</span>':""}</div>
+      <div class="meta">${esc(s.myRole||"-")} · 대사 ${n}개${secs?` · ${secs}개 장면`:""}${s.analysis?" · 분석 완료":""}</div>
+      <div class="meter" style="margin-top:8px"><i style="width:${p}%"></i></div></div>
+      <div class="pct">${p}%</div></button>`; };
+  const last=list[0];
+  return `<div class="top"><span class="brand">대본 연습실</span><span class="row"><button class="ghost" data-act="settings">설정</button><button data-act="new">대본 추가</button></span></div>
+  ${!localStorage.getItem(AI_KEY)?`<div class="notice">AI 분석은 기본으로 <b>키 없이</b> 써요. 앱이 만든 질문을 ChatGPT나 제미나이에 붙여 넣고 답을 다시 붙여 넣는 방식이에요. API 키가 있으면 <button class="ghost" data-act="settings">설정</button>에서 자동으로 돌릴 수 있어요.</div>`:""}
+  ${S.loadNote?`<div class="notice warn">${esc(S.loadNote)}</div>`:""}
+  ${S.storage==="loading"?`<div class="notice"><span class="spinner"></span> 저장된 대본을 불러오는 중…</div>`:""}
+  ${last?`<div class="hero"><div class="label">이어서 연습하기</div><div class="big">${esc(last.title)}</div>
+     <div class="small muted">${esc(last.myRole)} · 암기율 ${mastery(last)}% · 못 외운 대사 ${myIdx(last).filter(i=>status(last,i)!=="ok").length}개</div>
+     <div class="row"><button class="primary" data-act="cont" data-id="${esc(last.id)}">연습 계속하기</button><button data-act="open" data-id="${esc(last.id)}">작품 보기</button></div></div>`
+   : S.storage!=="loading"? `<div class="hero"><div class="big">대본 파일을 올려 보세요</div><p class="muted">막·장을 나누고, 작품과 인물을 분석하고, 내 대사를 가려서 외울 수 있게 정리해 드려요. 먼저 아래 예시로 둘러봐도 좋아요.</p><div class="row"><button class="primary" data-act="new">PDF·한글 대본 올리기</button></div></div>`:""}
+  ${list.length>1?`<div class="label">내 대본</div><div class="cards">${list.slice(1).map(card).join("")}</div>`:""}
+  <div class="label">예시</div><div class="cards">${card(EXAMPLE)}</div>
+  <p class="small muted">${esc(storageNote())}</p>`;
+}
+function viewSettings(){
+  const a=aiSettings(), M=S.set||{};
+  const keyVal= a.mode==="gemini"? a.geminiKey : a.mode==="openai"? a.openaiKey : "";
+  const model= a.mode==="gemini"? a.geminiModel : a.mode==="openai"? a.openaiModel : "";
+  return `<div class="top"><button class="ghost" data-act="home">← 목록</button><h2 class="grow">설정</h2></div>
+  <div class="panel"><h3>AI 분석 방법</h3>
+    <div class="row">${[["manual","키 없이"],["gemini","제미나이 API"],["openai","ChatGPT API"]].map(([k,v])=>`<button class="chip" data-act="aimode" data-mode="${k}" aria-pressed="${a.mode===k}">${v}</button>`).join("")}</div>
+    ${a.mode==="manual"? `<p class="small">앱이 만든 질문을 ChatGPT나 제미나이 앱(무료 계정도 돼요)에 붙여 넣고, 답을 다시 붙여 넣어요. 장편 한 편을 분석하는 데 서너 번 오가요. 스캔한 PDF 글자 읽기는 이 방법으로는 안 돼요.</p>`
+    : `<p class="small">${a.mode==="gemini"?`구글 AI Studio에서 키를 무료로 받을 수 있어요: <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. 무료 사용량 안에서는 요금이 들지 않아요.`:`OpenAI 플랫폼에서 키를 받아요: <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>. ChatGPT Plus 구독과는 별개로, 쓴 만큼 결제해요.`}</p>
+      <label class="label" for="aiKey">API 키</label>
+      <input type="password" id="aiKey" autocomplete="new-password" spellcheck="false" value="${esc(keyVal)}" placeholder="${a.mode==="gemini"?"AIza로 시작하는 키":"sk-로 시작하는 키"}">
+      <div class="row"><button class="primary" data-act="aicheck" ${M.busy?"disabled":""}>${M.busy?'<span class="spinner"></span> 확인 중':"연결 확인"}</button>${keyVal?`<button class="ghost" data-act="aiforget">이 기기에서 키 지우기</button>`:""}${model?`<span class="small muted">모델: ${esc(model)}</span>`:""}</div>
+      <p class="small muted">키는 이 기기에만 저장되고, 분석할 때만 ${a.mode==="gemini"?"구글":"OpenAI"}로 바로 보내져요.${keyVal?"":" 키를 넣고 연결 확인을 누르기 전까지는 '키 없이' 방법으로 분석해요."}</p>`}
+    ${M.msg?`<div class="notice ${M.ok?"":"warn"}">${esc(M.msg)}</div>`:""}
+    <p class="small muted">어느 방법이든 분석할 때 대본 내용이 그 AI 회사로 보내져요. 지금 쓰는 방법: <b>${esc(aiName())}</b></p>
+  </div>
+  <div class="panel"><h3>백업 · 다른 기기로 옮기기</h3>
+    <p class="small">대본·분석·진도는 이 기기에만 저장돼요. 백업 파일을 저장해 다른 기기에서 불러오면 이어서 할 수 있어요. 진도는 대사마다 더 최근 기록이 남아요.</p>
+    <label class="row small" for="bkRecs"><input type="checkbox" id="bkRecs"> 녹음 파일도 넣기 (파일이 커져요)</label>
+    <div class="row"><button class="primary" data-act="backup" ${S.scripts.length?"":"disabled"}>백업 파일 저장</button><button data-act="restore">백업 불러오기</button></div>
+  </div>
+  <p class="small muted">${esc(storageNote())}</p>`;
+}
+function viewAdd(){
+  const A=S.add, roles=A.parsed? rolesOf(A.parsed):[], R=A.reading;
+  const acts=A.parsed?A.parsed.filter(l=>l.k==="act").length:0, scs=A.parsed?A.parsed.filter(l=>l.k==="scene").length:0;
+  return `<div class="top"><button class="ghost" data-act="home">← 목록</button><h2 class="grow">대본 추가</h2></div>
+  ${!A.parsed&&!R?`<label class="drop" id="drop" for="pdfInput" tabindex="0"><span class="big">대본 파일 올리기</span><span class="small muted">PDF나 한글(HWP·HWPX) 파일을 눌러서 고르거나, 여기로 끌어다 놓으세요.<br>${canImages?"스캔한 PDF도 AI가 글자를 읽어요.":"글자를 고를 수 있는 PDF를 올려 주세요. 스캔한 PDF는 설정에서 API 키를 넣으면 읽어요."}</span></label>`:""}
+  ${A.pdf&&!A.parsed&&!R?`<div class="panel"><h3>${A.pages}쪽짜리 PDF예요</h3><p class="small muted">표지나 등장인물 소개처럼 대사가 없는 쪽은 빼도 돼요.</p>
+     <div class="row"><label class="range" for="pFrom">시작 쪽 <input type="number" id="pFrom" min="1" max="${A.pages}" value="${A.from}"></label><label class="range" for="pTo">끝 쪽 <input type="number" id="pTo" min="1" max="${A.pages}" value="${A.to}"></label><button class="primary" data-act="readpdf">이 범위 읽기</button></div></div>`:""}
+  ${R?`<div class="job"><span class="spinner"></span><span class="grow">${esc(R.note||"PDF 읽는 중")}… <span class="score">${R.done}/${R.total}${R.unit?"":"쪽"}</span></span><button class="ghost" data-act="readstop">멈추기</button></div>`:""}
+  ${A.err?`<div class="notice warn">${esc(A.err)}</div>`:""}
+  ${A.parsed&&!R?`<div class="panel">
+    <label class="label" for="addTitle">제목</label>
+    <input type="text" id="addTitle" value="${esc(A.title)}" placeholder="작품 제목">
+    <p class="small muted">대사 ${A.parsed.filter(l=>l.k==="line").length}줄 · 인물 ${roles.length}명${acts?` · ${acts}막`:""}${scs?` · ${scs}개 장`:""}${!acts&&!scs?" · 막·장 표시가 없어서 분석할 때 AI가 장면을 나눠요":""}</p>
+  </div>
+  ${aliasCard(A.groups||[],!!A.aliasBusy,A.aliasNote,"add",A.raw||A.parsed)}
+  <div class="panel">
+    <h3>내 배역</h3>
+    <div class="row">${roles.slice(0,40).map(x=>`<button class="chip" data-act="pickrole" data-role="${esc(x.r)}" aria-pressed="${x.r===A.role}">${esc(x.r)} <span class="small">${x.n}</span></button>`).join("")}</div>
+    <div class="script" style="max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:6px">${A.parsed.slice(0,30).map(l=>previewRow(l,A.role)).join("")}${A.parsed.length>30?`<p class="small muted" style="padding:6px 8px">… 외 ${A.parsed.length-30}줄</p>`:""}</div>
+    <p class="small muted">인물 이름이 이상하게 나뉘었으면 AI로 다시 나눠 보세요.</p>
+    <div class="row"><button class="primary" data-act="save" ${A.role?"":"disabled"}>저장하고 분석 시작</button>${sample?`<button data-act="aiparse">AI로 다시 나누기</button>`:""}<button class="ghost" data-act="restart">다른 파일</button></div>
+  </div>`:""}
+  ${!R?`<details ${A.showText?"open":""} id="textBox"><summary>파일 대신 텍스트로 붙여 넣기</summary><div class="panel" style="margin-top:8px">
+    <textarea id="addText" placeholder="1막&#10;1장 · 민호의 방, 밤&#10;민호: 이 시간에 웬일이야?&#10;수진: 이거 돌려주러 왔어.">${esc(A.text)}</textarea>
+    <div class="row"><button data-act="parse">배역 나누기</button>${sample?`<button data-act="aiparse">AI로 나누기</button>`:""}</div></div></details>`:""}`;
+}
+function previewRow(l,role){
+  if(l.k==="act") return `<div class="acthead" style="font-size:16px;padding-top:8px">${esc(l.t)}</div>`;
+  if(l.k==="scene") return `<div class="sechead" style="padding-top:8px"><div class="t">${esc(l.t)}</div></div>`;
+  if(l.k==="dir") return `<div class="ln dir">${esc(l.t)}</div>`;
+  return `<div class="ln${l.r===role?" mine":""}"><div class="who">${whoHTML(l)}</div><div class="say">${speechHTML(l.t)}</div></div>`;
+}
+const whoHTML=l=> esc(l.r)+(l.a&&l.a!==l.r?`<span style="display:block;font-weight:400;font-size:11.5px">${esc(l.a)}</span>`:"");
+function lineRow(l,i,s){
+  if(l.k==="dir") return `<div class="ln dir" id="L${i}">${esc(l.t)}</div>`;
+  const mine=l.r===s.myRole, R=S.read, note=notesFor(s,i);
+  const hidden=mine&&R.hide&&!R.shown[i];
+  const showStory=mine&&note&&note.story&&(R.stories||R.open[i]);
+  const rec=!s.example&&recs.has(s.id,i);
+  return `<div class="ln${mine?" mine":""}" id="L${i}"><div class="who">${whoHTML(l)}</div><div class="say">
+    <div ${hidden?`data-act="reveal" data-i="${i}" role="button" tabindex="0" style="cursor:pointer"`:""}>${speechHTML(l.t,{keys:note&&note.keys,showKeys:R.keys&&mine,mask:hidden?"none":""})}</div>
+    ${showStory?`<div class="story">${boldKeys(note.story,note.keys)}</div>`:""}
+    <div class="tools">
+      ${!mine?`<button data-act="say" data-i="${i}">듣기</button>`:""}
+      ${mine&&note&&note.story&&!R.stories?`<button data-act="story" data-i="${i}">${R.open[i]?"흐름 접기":"흐름 설명"}</button>`:""}
+      ${!s.example?(rec?`<button data-act="play" data-i="${i}">녹음 듣기</button><button class="ghost" data-act="recdel" data-i="${i}">녹음 지우기</button>`:recBtn(s,i,mine)):""}
+    </div></div></div>`;
+}
+function secHead(s,x){
+  const A=s.analysis, st=A&&A.stages?A.stages[x.start]:null, sc=A&&A.scenes?A.scenes[x.start]:null, turn=A&&A.turning&&A.turning.includes(x.start);
+  return `<div class="sechead" id="S${x.start}"><div class="t">${stBadge(st)}<span>${esc(x.label)}</span>${sc&&sc.title?`<span class="muted" style="font-weight:500">· ${esc(sc.title)}</span>`:""}${turn?'<span class="tag">전환점</span>':""}</div>${sc&&sc.event?`<div class="ev">${esc(sc.event)}</div>`:""}</div>`;
+}
+function viewScript(s){
+  const tabs=[["run","연습"],["read","대본"],["work","작품 분석"],["chars","인물"],["prog","진도"]];
+  return `<div class="top"><button class="ghost" data-act="home">← 목록</button>
+    <div class="grow"><h2>${esc(s.title||"제목 없음")}</h2><div class="small muted">내 배역 <b>${esc(s.myRole)}</b>${s.example?' · <span class="tag plain">예시</span> 진도는 저장되지 않아요':""}</div></div>
+    ${!s.example?`<button class="ghost" data-act="edit">설정</button>`:""}</div>
+  ${S.edit&&!s.example?viewEdit(s):""}
+  ${jobBar(s)}
+  <div class="tabs" role="tablist">${tabs.map(([k,v])=>`<button role="tab" aria-selected="${S.tab===k}" data-act="tab" data-tab="${k}">${v}</button>`).join("")}</div>
+  ${S.tab==="read"?viewRead(s):S.tab==="run"?viewRun(s):S.tab==="work"?viewWork(s):S.tab==="chars"?viewChars(s):viewProg(s)}`;
+}
+function viewEdit(s){
+  const roles=rolesOf(s.lines);
+  return `<div class="panel">
+    <label class="label" for="editTitle">제목</label><input type="text" id="editTitle" value="${esc(s.title)}">
+    <label class="label" for="editRole">내 배역</label>
+    <select id="editRole">${roles.map(x=>`<option ${x.r===s.myRole?"selected":""}>${esc(x.r)}</option>`).join("")}</select>
+    <p class="small muted">배역을 바꾸면 진도와 내 대사 핵심 단어가 새로 시작돼요. 작품·인물 분석은 그대로 남아요.</p>
+    <div class="row"><button class="primary" data-act="editsave">적용</button><button data-act="edit">닫기</button><span class="grow"></span><button class="ng" data-act="askdel">대본 지우기</button></div>
+    <div class="label">같은 인물 정리</div>
+    ${mergedNow(s).map(g=>`<div class="row small"><b>${esc(g.main)}</b><span class="muted">←</span>${g.aliases.map(a=>`<span class="tag plain">${esc(a)}</span> <button class="ghost" data-act="undoalias" data-a="${esc(a)}" style="min-height:30px;padding:2px 8px">되돌리기</button>`).join("")}</div>`).join("")||'<p class="small muted">합친 이름이 없어요.</p>'}
+    ${S.aliasEdit? aliasCard(S.aliasEdit.groups,!!S.aliasEdit.busy,S.aliasEdit.note,"edit",s.lines)+`<div class="row"><button class="primary" data-act="aliasapply" ${S.aliasEdit.busy?"disabled":""}>체크한 이름 합치기</button><button class="ghost" data-act="aliascancel">취소</button></div>`
+      : `<div class="row"><button data-act="aliasfind">같은 인물 찾기</button><span class="small muted">애칭·성 뺀 이름·무대 밖 목소리처럼 표기만 다른 인물을 찾아요.</span></div>`}
+    ${S.confirmDel?`<div class="confirm"><p>"${esc(s.title)}"와 분석·진도·녹음을 모두 지울까요? 되돌릴 수 없어요.</p><div class="row"><button class="ng" data-act="del">지우기</button><button data-act="askdel">취소</button></div></div>`:""}
+  </div>`;
+}
+function needAI(s){
+  if(S.job&&S.job.sid===s.id) return "";
+  if(!sample) return `<div class="notice">AI 설정을 먼저 확인해 주세요. <button class="ghost" data-act="settings">설정 열기</button></div>`;
+  return "";
+}
+function secOptions(s,sel){
+  const secs=sectionsOf(s); if(secs.length<2) return "";
+  const A=s.analysis;
+  return `<select id="secSel" aria-label="장면 고르기"><option value="all" ${sel==="all"?"selected":""}>작품 전체</option>${secs.map(x=>`<option value="${x.start}" ${String(sel)===String(x.start)?"selected":""}>${A&&A.stages&&A.stages[x.start]?`[${A.stages[x.start]}] `:""}${esc(x.label)}${A&&A.scenes&&A.scenes[x.start]&&A.scenes[x.start].title?` · ${esc(A.scenes[x.start].title)}`:""} (내 대사 ${myIdx(s,x).length})</option>`).join("")}</select>`;
+}
+function viewRead(s){
+  const R=S.read, has=hasNotes(s), secs=sectionsOf(s);
+  let body="", si=0;
+  s.lines.forEach((l,i)=>{
+    while(si<secs.length&&secs[si].start===i){ const x=secs[si]; if(!x.whole){ if(x.act&&(si===0||secs[si-1].act!==x.act)&&!x.isAct) body+=`<div class="acthead">${esc(x.act)}</div>`; body+=secHead(s,x); } si++; }
+    if(l.k==="act"||l.k==="scene") return;
+    body+=lineRow(l,i,s);
+  });
+  return `${needAI(s)}
+  ${!s.example&&sample&&!S.job&&!has?`<div class="panel"><h3>내 대사 암기 도우미</h3><p class="small muted">내 대사마다 흐름상 핵심 단어를 표시하고, 왜 그 말을 하는지 이야기로 이어서 설명해 드려요.</p><div class="row"><button class="primary" data-act="mknotes">핵심 단어·흐름 만들기</button></div></div>`:""}
+  ${secs.length>1?`<div class="row"><span class="label">장면으로 이동</span><div class="grow">${secOptions(s,"all").replace('id="secSel"','id="jumpSel"')}</div></div>`:""}
+  <div class="toggles">
+    ${has?`<button class="chip" data-act="tg" data-k="keys" aria-pressed="${R.keys}">핵심 단어</button><button class="chip" data-act="tg" data-k="stories" aria-pressed="${R.stories}">흐름 설명 모두 펼치기</button>`:""}
+    <button class="chip" data-act="tg" data-k="hide" aria-pressed="${R.hide}">내 대사 가리기</button>
+  </div>
+  ${R.hide?`<p class="small muted">가려진 대사를 누르면 그 줄만 보여요.</p>`:""}
+  <div class="panel"><div class="script">${body}</div></div>`;
+}
+function viewRun(s){
+  const R=S.run;
+  const settings=`<div class="row small">
+    <button class="chip" data-act="auto" aria-pressed="${S.settings.auto}">상대 대사 자동 읽기</button>
+    <label class="range" for="rate">속도 <input type="range" id="rate" min="0.7" max="1.5" step="0.1" value="${S.settings.rate}"> <span class="score">${S.settings.rate.toFixed(1)}</span></label></div>`;
+  if(!R){
+    const sec=runSection(s), weak=myIdx(s,sec).filter(i=>status(s,i)!=="ok").length, tot=myIdx(s,sec).length;
+    const A=s.analysis, sc=sec&&A&&A.scenes?A.scenes[sec.start]:null;
+    return `<div class="panel"><h3>리허설</h3>
+      ${sectionsOf(s).length>1?`<label class="label" for="secSel">연습할 장면</label>${secOptions(s,S.runSec)}`:""}
+      ${sc?`<p class="small">${stBadge(A.stages&&A.stages[sec.start])} ${esc(sc.event)}</p>`:""}
+      <p class="small muted">상대 대사는 소리로 읽어 주고, 내 차례가 오면 멈춰서 기다려요. 내 대사는 가려져 있고 힌트를 단계별로 열 수 있어요. 이 범위의 내 대사 ${tot}개 중 ${tot-weak}개를 외웠어요.</p>
+      ${settings}
+      <div class="row"><button class="primary" data-act="runall" ${tot||sec?"":"disabled"}>처음부터</button><button data-act="runweak" ${weak?"":"disabled"}>못 외운 대사만 (${weak})</button></div></div>
+      ${!hasNotes(s)&&sample&&!s.example&&!S.job?`<div class="notice">내 대사 핵심 단어·흐름 힌트를 만들면 연습할 때 힌트로 쓸 수 있어요. <button class="ghost" data-act="mknotes">지금 만들기</button></div>`:""}`;
+  }
+  if(R.done) return `<div class="panel"><h3>한 바퀴 끝!</h3><p>맞음 <b class="score">${R.okN}</b> · 틀림 <b class="score">${R.ngN}</b> · 이 범위 암기율 <b class="score">${mastery(s,R.sec)}%</b></p><p class="small muted">한 대사를 두 번 이상 맞히고 마지막에도 맞히면 암기됨으로 쳐요.</p>
+    <div class="row"><button class="primary" data-act="runweak">못 외운 대사만 다시</button><button data-act="runall">처음부터 다시</button><button class="ghost" data-act="runexit">그만하기</button></div></div>`;
+  const i=R.seq[R.pos], l=s.lines[i], mine=l.r===s.myRole, note=notesFor(s,i);
+  const sec=secOfLine(s,i), A=s.analysis, st=A&&A.stages&&sec?A.stages[sec.start]:null;
+  const ch=s.chars&&s.chars[s.myRole], arc=ch&&sec? ch.arc.find(x=>x.i===sec.start):null;
+  const beat=!arc&&A&&A.beats&&sec? A.beats.find(b=>b.name===s.myRole&&b.i===sec.start):null;
+  const ctxIdx=[]; for(let c=i-1;c>=(sec?sec.start:0)&&ctxIdx.length<2;c--){ if(s.lines[c].k==="line"||s.lines[c].k==="dir") ctxIdx.unshift(c); }
+  const ctx=ctxIdx.map(c=>{const x=s.lines[c]; return `<div>${x.k==="line"?`<span class="who">${esc(x.r)}</span>`:""}${esc(x.t)}</div>`;}).join("");
+  const hintBtns=[["none","가림"],["first","첫 글자"],["keys","핵심 단어"]].filter(h=>h[0]!=="keys"||(note&&note.keys&&note.keys.length));
+  let body;
+  if(!mine){
+    body=`<div class="cue"><span class="who">${esc(l.r)}</span>${speechHTML(l.t)}</div>
+      <div class="row">${R.playing?`<span class="small muted"><span class="spinner"></span> 읽는 중…</span>`:""}<button data-act="say" data-i="${i}">다시 듣기</button><span class="grow"></span><button class="primary" data-act="next">다음 →</button></div>`;
+  } else {
+    const result=R.heard&&!R.listening&&R.heard.text? compare(l.t,R.heard.text):null;
+    const mood=arc?`${arc.emotion} — ${arc.note}`:beat?`${beat.emotion} · 원하는 것: ${beat.want}`:"";
+    body=`<div class="cue mine"><span class="who">${esc(l.r)} · 내 차례</span>${speechHTML(l.t,{keys:note&&note.keys,mask:R.revealed?"":R.hint,showKeys:R.revealed})}</div>
+      ${!R.revealed?`<div class="row">${hintBtns.map(h=>`<button class="chip" data-act="hint" data-h="${h[0]}" aria-pressed="${R.hint===h[0]}">${h[1]}</button>`).join("")}
+        ${note&&note.story?`<button class="chip" data-act="rstory" aria-pressed="${R.showStory}">흐름 힌트</button>`:""}</div>`:""}
+      ${(R.showStory||R.revealed)&&note&&note.story?`<div class="story">${boldKeys(note.story,note.keys)}</div>`:""}
+      ${R.listening?`<div class="heard" id="heardLive">${esc((R.heard.text+" "+(R.heard.partial||"")).trim()||"듣고 있어요…")}</div><div class="row"><button class="primary" data-act="dictdone">다 말했어요</button></div>`:""}
+      ${result?`<div class="heard"><div class="small muted">들은 말과 <span class="score">${result.score}%</span> 일치 · 빨간 단어는 빠졌거나 달라요</div>${result.html}</div>`:""}
+      <div class="row">
+        ${!R.revealed&&!R.listening&&dict?`<button data-act="dict">말로 확인</button>`:""}
+        ${!R.revealed&&!R.listening?`<button data-act="reveal1">정답 보기</button>`:""}
+        ${!s.example&&recs.has(s.id,i)?`<button data-act="play" data-i="${i}">내 녹음 듣기</button>`:""}${!s.example?recBtn(s,i,true):""}
+      </div>
+      ${mood?`<p class="small muted">이 장면의 ${esc(s.myRole)}: ${esc(mood)}</p>`:""}
+      ${!R.listening?`<div class="bigbtns"><button class="ng" data-act="judge" data-ok="0">틀렸어요</button><button class="ok" data-act="judge" data-ok="1">맞았어요</button></div>`:""}`;
+  }
+  return `<div class="panel stage">
+    <div class="row between"><span class="where">${stBadge(st)}<span>${esc(sec&&!sec.whole?sec.label:"")}</span><span class="counter">${R.weakOnly?"못 외운 대사":"처음부터"} · ${R.pos+1} / ${R.seq.length}</span></span><span class="row"><button class="ghost" data-act="prev" ${R.pos?"":"disabled"}>← 이전</button><button class="ghost" data-act="runexit">그만</button></span></div>
+    ${ctx?`<div class="ctx">${ctx}</div>`:""}
+    ${body}
+  </div>${settings}`;
+}
+function quoteBtn(s,i,why){
+  if(i==null||!s.lines[i]) return "";
+  const l=s.lines[i], sec=secOfLine(s,i);
+  return `<button class="quote" data-act="goto" data-i="${i}">${l.k==="line"?`${esc(l.r)}: `:""}${esc(speechOnly(l.t).slice(0,90))}${speechOnly(l.t).length>90?"…":""}<span class="src">${esc(sec&&!sec.whole?sec.label:"")}${why?" · "+esc(why):""}</span></button>`;
+}
+function viewWork(s){
+  const A=s.analysis;
+  if(!A) return `${needAI(s)}${sample&&!S.job?`<div class="panel"><h3>작품 분석</h3><p class="small muted">막·장을 나누고, 줄거리·주제·갈등과 기승전결, 인물 관계도를 만들어요. 장편은 몇 분 걸려요.</p><div class="row"><button class="primary" data-act="mkwork">작품 분석 시작</button></div></div>`:""}`;
+  const secs=sectionsOf(s);
+  const byStage={기:[],승:[],전:[],결:[]}; secs.forEach(x=>{ const st=A.stages&&A.stages[x.start]; if(st) byStage[st].push(x); });
+  const arcTxt=st=>(A.arc||[]).find(a=>a.stage===st);
+  return `<div class="panel"><div class="label">한 줄 요약</div><p style="font-family:var(--font-script);font-size:17px">${esc(A.logline)}</p>
+    <dl class="dl"><dt>줄거리</dt><dd>${esc(A.summary)}</dd><dt>주제</dt><dd>${esc(A.theme)}</dd><dt>중심 갈등</dt><dd>${esc(A.conflict)}</dd></dl></div>
+  <div class="panel"><div class="label">기승전결</div><div class="arc">${STAGES.map(st=>`<div><div class="row">${stBadge(st)}<b>${st}</b></div><span>${esc(arcTxt(st)?arcTxt(st).text:"")}</span>
+      <div class="scenes">${byStage[st].map(x=>`<button data-act="gosec" data-start="${x.start}">${esc(x.short)}</button>`).join("")}</div></div>`).join("")}</div></div>
+  <div class="panel"><div class="label">장면 구성 (${secs.length})</div><div class="sclist">${secs.map(x=>{ const sc=A.scenes&&A.scenes[x.start]; return `<button class="sc" data-act="gosec" data-start="${x.start}">${stBadge(A.stages&&A.stages[x.start])||'<span class="st"></span>'}<span class="no">${esc(x.short)}</span><span><span class="tt">${esc(sc&&sc.title||x.label)}</span>${A.turning&&A.turning.includes(x.start)?' <span class="tag">전환점</span>':""}<br><span class="ev">${esc(x.label)}${sc&&sc.event?" — "+esc(sc.event):""}</span></span></button>`; }).join("")}</div></div>
+  <div class="panel"><div class="label">인물 관계도</div>${relMap(s)}
+    ${S.relSel!=null&&A.rel[S.relSel]?`<div class="story"><b>${esc(A.rel[S.relSel].a)} ↔ ${esc(A.rel[S.relSel].b)}</b> · ${esc(A.rel[S.relSel].label)}<br>${esc(A.rel[S.relSel].desc)}</div>`:`<p class="small muted">선을 누르면 관계 설명이, 이름을 누르면 인물 분석이 나와요.</p>`}
+    <div>${(A.rel||[]).map((r,k)=>`<div class="rel"><span class="pair">${esc(r.a)} ↔ ${esc(r.b)} <span class="tag">${esc(r.label)}</span></span><span class="small">${esc(r.desc)}</span>${quoteBtn(s,r.i,"근거 대사")}</div>`).join("")}</div></div>
+  ${!s.example&&sample&&!S.job?`<div class="row"><button class="ghost" data-act="mkwork">작품 분석 다시 하기</button></div>`:""}`;
+}
+function relMap(s){
+  const A=s.analysis; const rel=A.rel||[]; if(!rel.length) return `<p class="muted small">관계 정보가 없어요.</p>`;
+  const counts=Object.fromEntries(rolesOf(s.lines).map(x=>[x.r,x.n]));
+  const names=[...new Set([...(A.chars||[]).map(c=>c.name),...rel.flatMap(r=>[r.a,r.b])])].sort((a,b)=>(counts[b]||0)-(counts[a]||0)).slice(0,14);
+  const center=names.includes(s.myRole)?s.myRole:names[0];
+  const others=names.filter(n=>n!==center);
+  const n=others.length, R=Math.max(105,Math.min(175,70+n*11)), cx=0, cy=0;
+  const pos={};
+  if(names.length<=4){
+    // up to four people: everyone on one ring (me at the bottom), so no line runs behind a node in the middle
+    const ring=[center,...others], m=ring.length;
+    ring.forEach((nm,k)=>{ const a=Math.PI/2+k*2*Math.PI/m; pos[nm]={x:cx+R*1.15*Math.cos(a),y:cy+R*0.9*Math.sin(a)}; });
+  } else {
+    pos[center]={x:cx,y:cy};
+    others.forEach((nm,k)=>{ const a=-Math.PI/2+k*2*Math.PI/n; pos[nm]={x:cx+R*1.25*Math.cos(a),y:cy+R*Math.sin(a)}; });
+  }
+  const xsP=names.map(m=>pos[m].x), ysP=names.map(m=>pos[m].y), pad=48;
+  const x0=Math.min(...xsP)-pad, y0=Math.min(...ysP)-pad, W=Math.max(260,Math.max(...xsP)-Math.min(...xsP)+pad*2), H=Math.max(...ysP)-Math.min(...ysP)+pad*2;
+  let edges="", labels="";
+  rel.forEach((r,k)=>{ const p=pos[r.a], q=pos[r.b]; if(!p||!q) return;
+    edges+=`<line class="edge${S.relSel===k?" sel":""}" data-act="relsel" data-k="${k}" x1="${p.x}" y1="${p.y}" x2="${q.x}" y2="${q.y}"><title>${esc(r.label)}</title></line>`;
+    const mx=(p.x+q.x)/2, my=(p.y+q.y)/2, w=Math.max(24,[...r.label].length*11+8);
+    labels+=`<g data-act="relsel" data-k="${k}" style="cursor:pointer"><rect class="elabbg" x="${mx-w/2}" y="${my-9}" width="${w}" height="18" rx="4"/><text class="elab" x="${mx}" y="${my+4}" text-anchor="middle">${esc(r.label)}</text></g>`; });
+  const nodes=names.map(n=>{ const p=pos[n], me=n===s.myRole, r=n===center?34:26; const lbl=[...n].length>5?[...n].slice(0,5).join("")+"…":n;
+    return `<g class="node${me?" me":""}" data-act="charsel" data-name="${esc(n)}"><circle cx="${p.x}" cy="${p.y}" r="${r}"/><text x="${p.x}" y="${p.y+4}" text-anchor="middle" font-size="${n===center?14:12.5}" font-weight="700">${esc(lbl)}</text><title>${esc(n)}</title></g>`; }).join("");
+  return `<div style="overflow-x:auto"><svg class="map" viewBox="${x0} ${y0} ${W} ${H}" style="max-width:${Math.round(W*1.5)}px" role="img" aria-label="인물 관계도">${edges}${labels}${nodes}</svg></div>`;
+}
+function curveSVG(s,arc){
+  const secs=sectionsOf(s); if(!arc.length) return "";
+  // drawn close to 1:1 on a phone so the labels stay readable; long plays scroll sideways
+  const W=Math.max(300,40+arc.length*46),H=190,pl=28,pr=14,pt=12,pb=34;
+  const xs=arc.map((a,k)=> arc.length===1? (pl+W-pr)/2 : pl+k*(W-pl-pr)/(arc.length-1));
+  const y=v=>pt+(5-v)*(H-pt-pb)/10;
+  const pts=arc.map((a,k)=>`${xs[k]},${y(a.level)}`).join(" ");
+  const area=arc.length>1?`<polygon class="area" points="${xs[0]},${y(0)} ${pts} ${xs[xs.length-1]},${y(0)}"/>`:"";
+  const lab=arc.map((a,k)=>{ const sec=secs.find(x=>x.start===a.i); return `<text x="${xs[k]}" y="${H-12}" text-anchor="middle">${esc(sec?sec.short:"")}</text>`; }).join("");
+  return `<div style="overflow-x:auto"><svg class="curve" viewBox="0 0 ${W} ${H}" style="min-width:${W}px;max-width:${Math.round(W*1.5)}px" role="img" aria-label="장면별 감정 곡선">
+    <line class="grid" x1="${pl}" x2="${W-pr}" y1="${y(5)}" y2="${y(5)}"/><line class="grid" x1="${pl}" x2="${W-pr}" y1="${y(-5)}" y2="${y(-5)}"/>
+    <line class="zero" x1="${pl}" x2="${W-pr}" y1="${y(0)}" y2="${y(0)}"/>
+    <text x="2" y="${y(5)+4}">+5</text><text x="8" y="${y(0)+4}">0</text><text x="2" y="${y(-5)+4}">−5</text>
+    ${area}${arc.length>1?`<polyline class="ln2" points="${pts}"/>`:""}
+    ${arc.map((a,k)=>`<circle cx="${xs[k]}" cy="${y(a.level)}" r="5" data-act="gosec" data-start="${a.i}"><title>${esc(a.emotion)} (${a.level})</title></circle>`).join("")}${lab}</svg></div>`;
+}
+function viewChars(s){
+  const A=s.analysis;
+  const counts=rolesOf(s.lines);
+  const names=A&&A.chars&&A.chars.length? [...new Set([...A.chars.map(c=>c.name),...counts.slice(0,20).map(x=>x.r)])] : counts.slice(0,30).map(x=>x.r);
+  const sel=S.charSel&&names.includes(S.charSel)?S.charSel:s.myRole;
+  const info=A&&A.chars? A.chars.find(c=>c.name===sel):null;
+  const C=s.chars&&s.chars[sel];
+  const secs=sectionsOf(s);
+  const appear=secs.map(x=>({x,n:s.lines.slice(x.start,x.end).filter(l=>l.k==="line"&&l.r===sel).length})).filter(o=>o.n>0);
+  const cnt=(counts.find(c=>c.r===sel)||{n:0}).n;
+  const written=[...new Set(s.lines.filter(l=>l.k==="line"&&l.r===sel&&l.a&&l.a!==sel).map(l=>l.a))];
+  const called=((s.called||{})[sel]||[]).filter(x=>!written.includes(x));
+  return `<div class="row">${names.map(n=>`<button class="chip" data-act="charsel" data-name="${esc(n)}" aria-pressed="${n===sel}">${esc(n)}${n===s.myRole?" (나)":""}</button>`).join("")}</div>
+  <div class="panel"><div class="row"><h2>${esc(sel)}</h2>${info&&info.role?`<span class="tag">${esc(info.role)}</span>`:""}<span class="small muted">대사 ${cnt}개 · ${appear.length}개 장면</span></div>
+    ${written.length||called.length?`<dl class="dl">${written.length?`<dt>대본 표기</dt><dd>${written.map(x=>`<span class="tag plain">${esc(x)}</span>`).join(" ")} <span class="small muted">같은 인물로 합친 이름</span></dd>`:""}${called.length?`<dt>불리는 이름</dt><dd>${called.map(x=>`<span class="tag plain">${esc(x)}</span>`).join(" ")}</dd>`:""}</dl>`:""}
+    ${info&&info.desc?`<p>${esc(info.desc)}</p>`:""}
+    ${!C?(needAI(s)||(!S.job&&sample&&!s.example?`<p class="small muted">원하는 것과 가로막는 것, 장면별 감정 곡선, 말투, 연기 포인트를 정리해요.</p><div class="row"><button class="primary" data-act="mkchar" data-name="${esc(sel)}">${esc(sel)} 인물 분석</button></div>`:"")):""}
+  </div>
+  ${C?`<div class="panel"><p>${esc(C.summary)}</p><dl class="dl"><dt>원하는 것</dt><dd>${esc(C.want)}</dd><dt>가로막는 것</dt><dd>${esc(C.obstacle)}</dd><dt>약점·모순</dt><dd>${esc(C.flaw)}</dd><dt>말투</dt><dd>${esc(C.speech)}</dd></dl></div>
+  ${C.arc.length?`<div class="panel"><div class="label">장면별 감정 곡선</div>${curveSVG(s,C.arc)}<div class="beats">${C.arc.map(a=>{ const x=secs.find(z=>z.start===a.i); return `<div class="beat">${stBadge(A&&A.stages?A.stages[a.i]:"")||'<span class="st"></span>'}<span class="no">${esc(x?x.short:"")}</span><span><b>${esc(a.emotion)}</b> <span class="muted score">${a.level>0?"+":""}${a.level}</span> — ${esc(a.note)}</span></div>`; }).join("")}</div></div>`:""}
+  <div class="panel"><div class="label">연기 포인트</div><ul class="pts">${C.points.map(p=>`<li>${esc(p)}</li>`).join("")}</ul></div>
+  ${C.rels.length?`<div class="panel"><div class="label">관계의 변화</div>${C.rels.map(r=>`<div class="rel"><span class="pair">${esc(r.with)} <span class="tag">${esc(r.label)}</span></span><span class="small">${esc(r.change)}</span></div>`).join("")}</div>`:""}
+  ${C.quotes.length?`<div class="panel"><div class="label">인물을 보여 주는 대사</div><div class="beats">${C.quotes.map(q=>quoteBtn(s,q.i,q.why)).join("")}</div></div>`:""}
+  ${!s.example&&sample&&!S.job?`<div class="row"><button class="ghost" data-act="mkchar" data-name="${esc(sel)}">이 인물 다시 분석</button></div>`:""}`:""}
+  <div class="panel"><div class="label">등장 장면</div><div class="sclist">${appear.map(o=>`<button class="sc" data-act="gosec" data-start="${o.x.start}">${stBadge(A&&A.stages?A.stages[o.x.start]:"")||'<span class="st"></span>'}<span class="no">${esc(o.x.short)}</span><span><span class="tt">${esc(A&&A.scenes&&A.scenes[o.x.start]&&A.scenes[o.x.start].title||o.x.label)}</span><br><span class="ev">대사 ${o.n}개</span></span></button>`).join("")||'<p class="muted small">대사가 있는 장면이 없어요.</p>'}</div></div>`;
+}
+function viewProg(s){
+  const m=myIdx(s), c={ok:0,mid:0,ng:0,new:0}; m.forEach(i=>c[status(s,i)]++);
+  const lbl={ok:"암기됨",mid:"연습 중",ng:"다시",new:"아직"};
+  const secs=sectionsOf(s).filter(x=>myIdx(s,x).length);
+  return `<div class="stats"><div class="stat"><span class="label">암기율</span><b>${mastery(s)}%</b></div><div class="stat"><span class="label">암기됨</span><b>${c.ok}<span class="small muted"> / ${m.length}</span></b></div><div class="stat"><span class="label">다시 볼 대사</span><b>${c.ng+c.mid+c.new}</b></div></div>
+  <p class="small muted">'암기됨'은 두 번 이상 맞히고 마지막에도 맞힌 대사예요.</p>
+  ${secs.length>1?`<div class="panel"><div class="label">장면별 암기율</div><div class="sclist">${secs.map(x=>{ const p=mastery(s,x); return `<button class="sc" data-act="runsec" data-start="${x.start}"><span class="pct" style="font-size:15px;min-width:44px;text-align:left">${p}%</span><span class="no">${esc(x.short)}</span><span><span class="tt">${esc(x.label)}</span><div class="meter" style="margin-top:6px"><i style="width:${p}%"></i></div></span></button>`; }).join("")}</div></div>`:""}
+  <div class="row"><button class="primary" data-act="runweakall" ${c.ng+c.mid+c.new?"":"disabled"}>못 외운 대사만 연습</button>${!s.example?`<button class="ghost" data-act="askreset">진도 초기화</button>`:""}</div>
+  ${S.confirmReset?`<div class="confirm"><p>이 대본의 맞음·틀림 기록을 모두 지울까요?</p><div class="row"><button class="ng" data-act="reset">초기화</button><button data-act="askreset">취소</button></div></div>`:""}
+  <div class="panel"><div class="plist">${m.map(i=>{ const p=(s.prog||{})[i]||{ok:0,ng:0}, st=status(s,i); return `<div class="pitem"><span class="dot ${st}" title="${lbl[st]}"></span><div class="txt">${esc(speechOnly(s.lines[i].t))}</div><div class="cnt"><span class="tag ${st==="ok"?"ok":st==="ng"?"ng":"plain"}">${lbl[st]}</span><br>맞음 ${p.ok} · 틀림 ${p.ng}</div></div>`; }).join("")||'<p class="muted">내 배역 대사가 없어요.</p>'}</div></div>`;
+}
+
+/* =========================================================
+   Events
+   ========================================================= */
+app.addEventListener("input", e=>{
+  const t=e.target;
+  if(t.id==="addTitle") S.add.title=t.value;
+  if(t.id==="addText"){ S.add.text=t.value; }
+  if(t.id==="pFrom") S.add.from=Number(t.value)||1;
+  if(t.id==="pTo") S.add.to=Number(t.value)||1;
+  if(t.id==="rate"){ S.settings.rate=Number(t.value); saveSettings(); const sp=t.parentElement.querySelector(".score"); if(sp) sp.textContent=S.settings.rate.toFixed(1); try{ tts&&tts.setRate&&tts.setRate(S.settings.rate);}catch(_){} }
+});
+app.addEventListener("change", e=>{
+  const t=e.target;
+  if(t.id==="secSel"){ S.runSec=t.value; render(); }
+  if(t.id==="jumpSel"&&t.value!=="all"){ const el=document.getElementById("S"+t.value); if(el) el.scrollIntoView({block:"start"}); }
+});
+app.addEventListener("change", e=>{
+  const t=e.target; if(!t.dataset||!t.dataset.alias) return;
+  const k=Number(t.dataset.k);
+  if(t.dataset.alias==="add"){ const g=S.add.groups[k]; if(g){ g.on=t.checked; applyAddAliases(); rerender(); } }
+  else if(S.aliasEdit){ const g=S.aliasEdit.groups[k]; if(g){ g.on=t.checked; rerender(); } }
+});
+app.addEventListener("toggle", e=>{ if(e.target.id==="textBox") S.add.showText=e.target.open; }, true);
+app.addEventListener("keydown", e=>{ if((e.key==="Enter"||e.key===" ")&&e.target.id==="drop"){ e.preventDefault(); document.getElementById("pdfInput").click(); return; } if((e.key==="Enter"||e.key===" ")&&e.target.dataset&&(e.target.dataset.act==="reveal")){ e.preventDefault(); e.target.click(); } });
+app.addEventListener("dragover", e=>{ const d=e.target.closest&&e.target.closest("#drop"); if(d){ e.preventDefault(); d.classList.add("over"); } });
+app.addEventListener("dragleave", e=>{ const d=e.target.closest&&e.target.closest("#drop"); if(d) d.classList.remove("over"); });
+app.addEventListener("drop", e=>{ const d=e.target.closest&&e.target.closest("#drop"); if(d){ e.preventDefault(); pickFile(e.dataTransfer.files&&e.dataTransfer.files[0]); } });
+function gotoLine(i){ stopSpeech(); S.tab="read"; S.run=null; S.read.hide=false; S.flashI=i; render(); }
+app.addEventListener("click", async e=>{
+  const b=e.target.closest("[data-act]"); if(!b) return;
+  const a=b.dataset.act, s=cur(), i=Number(b.dataset.i);
+  switch(a){
+    case "new": S.view="add"; S.add={title:"",text:"",parsed:null,role:"",err:"",pdf:null,pages:0,from:1,to:1,reading:null,showText:false}; render(); break;
+    case "restart": S.add={title:"",text:"",parsed:null,role:"",err:"",pdf:null,pages:0,from:1,to:1,reading:null,showText:false}; render(); break;
+    case "home": stopSpeech(); stopDict(); S.view="library"; S.run=null; S.edit=false; S.confirmDel=false; render(); break;
+    case "open": S.curId=b.dataset.id; S.view="script"; S.tab=b.dataset.id==="__example"?"work":"run"; S.run=null; S.runSec="all"; S.read.open={}; S.read.shown={}; S.edit=false; S.charSel=null; S.relSel=null; render(); window.scrollTo(0,0); break;
+    case "cont": S.curId=b.dataset.id; S.view="script"; S.tab="run"; S.run=null; S.runSec="all"; S.edit=false; render(); window.scrollTo(0,0); break;
+    case "readpdf": readPdf(); break;
+    case "readstop": S.add.reading&&S.add.reading.ctl.abort(); break;
+    case "parse": doParse(); break;
+    case "aiparse": aiParse(); break;
+    case "pickrole": S.add.role=b.dataset.role; rerender(); break;
+    case "save": {
+      const A=S.add; if(!A.parsed||!A.role) break;
+      A.aliasBusy&&A.aliasBusy.abort();
+      const ns={id:uid8(), title:A.title.trim()||"새 대본", myRole:A.role, lines:A.parsed, called:A.called||{}, prog:{}, notes:null, analysis:null, chars:{}, aiSections:null, createdAt:Date.now(), updatedAt:Date.now(), lastRun:Date.now()};
+      S.scripts.push(ns); saveScript(ns,0); S.curId=ns.id; S.view="script"; S.tab="run"; S.runSec="all"; S.run=null; render(); window.scrollTo(0,0);
+      if(sample) runPipeline(ns,["work","char","notes"]);
+      break; }
+    case "tab": stopSpeech(); stopDict(); S.tab=b.dataset.tab; if(S.tab!=="run") S.run=null; render(); window.scrollTo(0,0); break;
+    case "tg": S.read[b.dataset.k]=!S.read[b.dataset.k]; if(b.dataset.k==="hide") S.read.shown={}; rerender(); break;
+    case "reveal": S.read.shown[i]=true; rerender(); break;
+    case "story": S.read.open[i]=!S.read.open[i]; rerender(); break;
+    case "say": speakLine(s,i); break;
+    case "play": { stopSpeech(); const blob=await recs.get(s.id,i); if(blob) playBlob(blob,speakTok); break; }
+    case "rec": toggleRecord(s.id,i); break;
+    case "settings": stopSpeech(); stopDict(); S.view="settings"; S.run=null; S.set=null; render(); window.scrollTo(0,0); break;
+    case "addaliasai": runAddAliases(); break;
+    case "aimode": { const a=aiSettings(); a.mode=b.dataset.mode; saveAISettings(a); S.set={...(S.set||{}),msg:""}; render(); break; }
+    case "aicheck": {
+      const a=aiSettings(), mode=a.mode, key=(document.getElementById("aiKey").value||"").trim();
+      S.set={busy:true,msg:""}; render();
+      try{ const r=await checkAI(mode,key); if(mode==="gemini"){ a.geminiKey=key; a.geminiModel=r.model; } else { a.openaiKey=key; a.openaiModel=r.model; } saveAISettings(a); S.set={msg:`연결됐어요. 모델: ${r.model}`,ok:true}; }
+      catch(e){ S.set={msg:(e&&e.message)||"연결하지 못했어요."}; }
+      render(); break; }
+    case "aiforget": { const a=aiSettings(); if(a.mode==="gemini"){ a.geminiKey=""; a.geminiModel=""; } else { a.openaiKey=""; a.openaiModel=""; } saveAISettings(a); S.set={msg:"이 기기에서 키를 지웠어요."}; render(); break; }
+    case "backup": exportBackup(!!(document.getElementById("bkRecs")||{}).checked); break;
+    case "restore": document.getElementById("backupInput").click(); break;
+    case "recdel": await recs.del(s.id,i); rerender(); break;
+    case "jobstop": S.job&&S.job.ctl.abort(); break;
+    case "mkwork": runPipeline(s,["work"]); break;
+    case "mknotes": runPipeline(s,["notes"]); break;
+    case "mkchar": { const st=["char"]; st.charName=b.dataset.name; runPipeline(s,st); break; }
+    case "charsel": S.charSel=b.dataset.name; S.tab="chars"; render(); window.scrollTo(0,0); break;
+    case "relsel": S.relSel=Number(b.dataset.k); rerender(); break;
+    case "goto": gotoLine(i); break;
+    case "gosec": { const st=Number(b.dataset.start); stopSpeech(); S.tab="read"; S.run=null; render(); const el=document.getElementById("S"+st)||document.getElementById("L"+st); if(el) el.scrollIntoView({block:"start"}); break; }
+    case "runsec": S.runSec=b.dataset.start; S.tab="run"; S.run=null; render(); window.scrollTo(0,0); break;
+    case "edit": S.edit=!S.edit; S.confirmDel=false; if(S.aliasEdit&&S.aliasEdit.busy) S.aliasEdit.busy.abort(); S.aliasEdit=null; render(); break;
+    case "aliasfind": findAliasesFor(s); break;
+    case "aliasapply": applyAliasEdit(s); break;
+    case "aliascancel": if(S.aliasEdit&&S.aliasEdit.busy) S.aliasEdit.busy.abort(); S.aliasEdit=null; render(); break;
+    case "undoalias": undoAlias(s,b.dataset.a); toast(`'${b.dataset.a}'를 따로 된 인물로 되돌렸어요.`); break;
+    case "manualalias": {
+      const p=b.dataset.p, from=document.getElementById(p+"From").value, to=document.getElementById(p+"To").value;
+      if(from===to){ toast("서로 다른 이름을 골라 주세요."); break; }
+      if(p==="add"){ const A=S.add; A.groups=addManualGroup(A.groups||[],from,to,A.raw); applyAddAliases(); }
+      else if(S.aliasEdit){ S.aliasEdit.groups=addManualGroup(S.aliasEdit.groups,from,to,s.lines); }
+      rerender(); break; }
+    case "editsave": { const t=document.getElementById("editTitle").value.trim(), r=document.getElementById("editRole").value; if(t) s.title=t; if(r!==s.myRole){ s.myRole=r; s.prog={}; s.progResetAt=Date.now(); } saveScript(s,0); S.edit=false; render(); break; }
+    case "askdel": S.confirmDel=!S.confirmDel; render(); break;
+    case "del": await deleteScript(s); S.view="library"; S.edit=false; S.confirmDel=false; render(); toast("대본을 지웠어요."); break;
+    case "askreset": S.confirmReset=!S.confirmReset; rerender(); break;
+    case "reset": s.prog={}; s.progResetAt=Date.now(); saveScript(s,0); S.confirmReset=false; render(); toast("진도를 초기화했어요."); break;
+    case "auto": S.settings.auto=!S.settings.auto; saveSettings(); rerender(); break;
+    case "runall": startRun(s,false); break;
+    case "runweak": startRun(s,true); break;
+    case "runweakall": S.runSec="all"; startRun(s,true); break;
+    case "runexit": stopSpeech(); stopDict(); S.run=null; try{S.wake&&S.wake.release();}catch(_){} render(); break;
+    case "next": next(); break;
+    case "prev": prev(); break;
+    case "hint": S.run.hint=b.dataset.h; S.settings.hint=b.dataset.h; saveSettings(); rerender(); break;
+    case "rstory": S.run.showStory=!S.run.showStory; rerender(); break;
+    case "reveal1": S.run.revealed=true; rerender(); break;
+    case "dict": startDict(); break;
+    case "dictdone": finishDict(); break;
+    case "judge": { const ok=b.dataset.ok==="1"; const idx=S.run.seq[S.run.pos]; if(ok) S.run.okN++; else S.run.ngN++; mark(s,idx,ok); next(); break; }
+  }
+});
+
+render();
+recs.load().then(()=>render());
+initApp();
+if("serviceWorker" in navigator && location.protocol==="https:") navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+
+</body>
+</html>

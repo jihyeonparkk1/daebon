@@ -1,0 +1,16 @@
+{
+  "name": "대본 연습실",
+  "short_name": "대본 연습실",
+  "description": "연극 대본을 올리면 막·장을 나누고 작품과 인물을 분석해, 내 대사를 가려 외우게 돕는 연습 앱",
+  "lang": "ko",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F2F4F6",
+  "theme_color": "#1E5A86",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
