@@ -1,5 +1,5 @@
 // 앱 화면 파일만 캐시해 오프라인에서도 열리게 한다. AI·글꼴·라이브러리 요청은 그대로 둔다.
-const CACHE = "daebon-v1.2.1";
+const CACHE = "daebon-v1.2.2";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/apple-touch-icon.png"];
 self.addEventListener("install", e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", e => {

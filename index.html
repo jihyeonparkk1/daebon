@@ -638,29 +638,17 @@ function doParse(){
   A.err=rs.length>=2?"":"배역 이름을 잘 찾지 못했어요. 아래 'AI로 나누기'를 눌러 보세요.";
   setParsed(lines);
 }
-/* parsed lines → same-character groups (rules now, AI in the background) → merged lines */
+/* parsed lines → same-character groups (rules) → merged lines */
 function setParsed(lines){
   const A=S.add;
   A.raw=lines; A.groups=ruleAliases(lines); A.called={}; A.aliasNote="";
   applyAddAliases();
   const rs=rolesOf(A.parsed); A.role=rs[0]?rs[0].r:"";
   render();
-  if(sample&&!aiManual&&rs.length>=2) runAddAliases();
 }
 function applyAddAliases(){
   const A=S.add; A.parsed=applyAliases(A.raw,A.groups);
   const m=aliasMap(A.groups); if(A.role&&m[A.role]) A.role=m[A.role];
-}
-async function runAddAliases(){
-  const A=S.add; const raw=A.raw;
-  A.aliasBusy=new AbortController(); A.aliasNote=""; S.manualLabel="같은 인물 찾기"; render();
-  try{
-    const r=await aiAliases(raw,A.aliasBusy.signal);
-    if(A.raw!==raw) return;
-    A.groups=mergeGroups(A.groups,r.groups,raw); A.called=r.called; applyAddAliases();
-    if(!A.groups.length) A.aliasNote="같은 인물로 보이는 다른 표기는 찾지 못했어요.";
-  }catch(e){ if(A.raw===raw) A.aliasNote= e&&e.code==="cancelled"? "" : "AI로 같은 인물을 찾지 못했어요. "+aiErrMsg(e); }
-  finally{ if(A.raw===raw){ A.aliasBusy=null; render(); } }
 }
 async function aiParse(){
   if(!sample) return;
@@ -739,63 +727,16 @@ function applyAliases(lines,groups){
   return lines.map(l=> l.k==="line"&&m[l.r]? {...l,r:m[l.r],a:l.a||l.r} : l);
 }
 /* words people are called by: frequent name-like words across the WHOLE play (so 꼬스쨔 is seen even if sampling misses it) */
-function frequentWords(lines){
-  const c={}, cast=castText(lines);
-  lines.forEach(l=>{ if(l.k!=="line"&&l.k!=="dir") return;
-    speechOnly(l.t).split(/[\s.,!?…~"'“”‘’·:;()\-—「」『』]+/).forEach(w=>{
-      w=w.replace(/(에게서|에게|한테|께서|께|이여|이야|야|아|여|은|는|이|가|을|를|의|도|와|과|랑|하고|님|씨)$/,"");
-      if(w.length>=2&&/^[가-힣]+$/.test(w)) c[w]=(c[w]||0)+1; }); });
-  const all=Object.entries(c).filter(([,n])=>n>=2);
-  const inCast=all.filter(([w])=>cast.includes(w));
-  const top=all.filter(([,n])=>n>=3).sort((a,b)=>b[1]-a[1]).slice(0,220);
-  const seen=new Set(); return [...inCast,...top].filter(([w])=>!seen.has(w)&&seen.add(w)).map(([w,n])=>`${w}(${n})`).join(", ");
-}
-async function aiAliases(lines,signal){
-  const roles=rolesOf(lines); if(roles.length<2||!sample) return {groups:[],called:{}};
-  const set=new Set(roles.map(x=>x.r));
-  const samples=roles.slice(0,70).map(x=>`- ${x.r} (${x.n}줄): ${lines.filter(l=>l.k==="line"&&l.r===x.r).slice(0,2).map(l=>l.t.slice(0,60)).join(" / ")}`).join("\n");
-  const body=lines.map((l,i)=>({l,i})).filter(o=>o.l.k==="line"||o.l.k==="dir");
-  const step=Math.max(1,Math.ceil(body.length/260));
-  const flow=body.filter((_,k)=>k%step===0).map(o=>`[${o.i}] ${o.l.k==="line"?o.l.r+": ":"(지문) "}${o.l.t.slice(0,90)}`).join("\n");
-  const res=await sample.json(`너는 연극 대본을 정리하는 드라마투르그다. 대사 앞에 붙은 화자 표기가 서로 다르지만 실제로는 같은 인물인 경우를 찾아라.
-흔한 경우: 성을 뺀 이름(안순돌 ↔ 순돌이), 이름에 '이'를 붙여 부름, 애칭·약칭, 직함과 이름(왕 ↔ 클로디어스, 부인 ↔ 노라), 무대 밖 목소리(OO소리, OO 목소리), 번역 표기 차이·오탈자(뜨레블레프 ↔ 트레플료프).
-러시아 고전은 특히 주의하라. 한 인물이 성, 이름+부칭, 애칭으로 번갈아 불린다. 등장인물 소개의 정식 이름에서 애칭을 떠올려 연결하라. 예: 꼰스딴찐 가브릴로비치 뜨레블레프 → 꼬스쨔, 이리나 니꼴라예브나 아르까지나 → 이리나, 류보피 안드레예브나 라네프스까야 → 류바·류보치까, 이반 → 바냐, 알렉산드르 → 사샤, 마리야 → 마샤, 소피야 → 소냐, 니꼴라이 → 꼴랴, 미하일 → 미샤, 예브게니 → 제냐, 드미뜨리 → 미쨔, 알렉세이 → 알료샤, 바르바라 → 바랴, 아나스따시야 → 나스쨔.
-셰익스피어·몰리에르 등 다른 고전도 직함, 성, 애칭이 섞여 나온다.
-같은 인물이라는 근거가 대본 흐름(등장인물 소개, 다른 인물이 부르는 호칭, 앞뒤 대사의 주고받음, 지문의 이름)에 있을 때만 묶어라. 비슷한 이름이어도 다른 사람(아이1과 아이2, 관군1과 관군2, 아버지와 아들, 같은 직함의 다른 인물)은 묶지 마라. 조금이라도 의심스러우면 sure를 false로.
-또 주요 인물마다 대사·지문 속에서 불리는 다른 이름(애칭·호칭·별명·직함)을 찾아라.
-JSON 하나로만 답하라:
-{"groups":[{"main":"대표로 쓸 표기(목록의 이름 중 등장인물 소개에 나오거나 가장 정식인 것)","aliases":["같은 인물의 다른 표기 — 목록에 있는 이름만"],"sure":true,"reason":"근거 한 문장","i":근거가 보이는 줄 번호}],
- "called":[{"name":"목록에 있는 인물 표기","as":["대사·지문 속에서 불리는 이름"]}]}
-
-등장인물 소개·앞부분:
-${castText(lines).slice(0,3000)||"(없음)"}
-
-화자 표기 목록(대사 수, 첫 대사):
-${samples}
-
-대본 전체에서 자주 나오는 낱말(조사를 뗀 형태, 횟수) — 이 중에 인물을 부르는 이름·애칭이 있으면 called에 넣어라:
-${frequentWords(lines)}
-
-대본 흐름(고르게 뽑은 일부, [줄 번호]):
-${flow}`,{signal});
-  const groups=arr(res&&res.groups).filter(g=>g&&typeof g==="object").map(g=>({main:String(g.main||""),aliases:(Array.isArray(g.aliases)?g.aliases:[]).map(String),sure:g.sure===true,reason:String(g.reason||""),i:Number.isFinite(Number(g.i))?Number(g.i):null,src:"ai"}))
-    .map(g=>({...g,names:[...new Set([g.main,...g.aliases])].filter(n=>set.has(n))})).filter(g=>g.names.length>1).map(g=>({...g,main:set.has(g.main)?g.main:undefined}));
-  // accept [{name, as:[…]}] (asked for) and {name:[…]} (a common variation)
-  const rawCalled=res&&res.called;
-  const pairs=Array.isArray(rawCalled)? rawCalled.map(c=>[c&&c.name,c&&c.as]) : rawCalled&&typeof rawCalled==="object"? Object.entries(rawCalled) : [];
-  const called={}; for(const [nm,as] of pairs){ const n=String(nm||""); if(set.has(n)) called[n]=[...new Set((Array.isArray(as)?as:[as]).filter(Boolean).map(String).filter(x=>x&&x!==n))].slice(0,8); }
-  return {groups,called};
-}
 function aliasCard(groups,busy,note,prefix,lines){
   const cnt=Object.fromEntries(rolesOf(lines).map(x=>[x.r,x.n]));
-  return `<div class="panel"><div class="row"><h3 class="grow">같은 인물로 보이는 이름</h3>${busy?`<span class="small muted"><span class="spinner"></span> AI가 흐름을 보고 찾는 중</span>`:""}</div>
+  return `<div class="panel"><div class="row"><h3 class="grow">같은 인물로 보이는 이름</h3></div>
     ${groups.length?groups.map((g,k)=>`<label class="rel" style="cursor:pointer"><span class="row"><input type="checkbox" data-alias="${prefix}" data-k="${k}" ${g.on?"checked":""}>
       <b>${esc(g.main)}</b><span class="muted">←</span>${g.names.filter(n=>n!==g.main).map(n=>`<span class="tag plain">${esc(n)} ${cnt[n]||0}</span>`).join(" ")}
       ${g.sure?"":'<span class="tag ng">확인 필요</span>'}</span><span class="small muted">${esc(g.reason)}</span></label>`).join("")
       : `<p class="small muted">${busy?"찾는 중이에요.":esc(note||"같은 인물로 보이는 다른 표기가 없어요.")}</p>`}
     ${groups.length?`<p class="small muted">체크한 것만 하나로 합쳐요. 대본에는 원래 적힌 이름도 작게 같이 보여요.</p>`:""}
     ${note&&groups.length?`<p class="small muted">${esc(note)}</p>`:""}
-    ${aiManual&&!busy&&prefix==="add"?`<div class="row"><button data-act="addaliasai">AI로 애칭·호칭까지 찾기</button><span class="small muted">ChatGPT·제미나이에 한 번 물어봐요.</span></div>`:""}
+    ${!groups.length?`<p class="small muted">애칭처럼 규칙으로 못 찾는 이름은 아래 '직접 합치기'로 묶으세요.</p>`:""}
     <details><summary>직접 합치기</summary><div class="row" style="margin-top:8px">
       <select id="${prefix}From" aria-label="합칠 이름" style="width:auto;flex:1">${rolesOf(lines).map(x=>`<option>${esc(x.r)}</option>`).join("")}</select>
       <span class="muted">→</span>
@@ -808,13 +749,8 @@ function addManualGroup(groups,from,to,lines){
   return mergeGroups(groups,[{names:[from,to],main:to,sure:true,reason:"직접 합쳤어요.",src:"me"}],lines).map(g=>g.names.includes(from)&&g.names.includes(to)?{...g,on:true,main:to}:g);
 }
 /* existing script: find, apply and undo merges */
-async function findAliasesFor(s){
+function findAliasesFor(s){
   S.aliasEdit={groups:ruleAliases(s.lines),busy:null,note:""}; render();
-  if(!sample){ S.aliasEdit.note="AI 설정을 먼저 확인해 주세요."; render(); return; }
-  const E=S.aliasEdit; E.busy=new AbortController(); S.manualLabel="같은 인물 찾기"; render();
-  try{ const r=await aiAliases(s.lines,E.busy.signal); if(S.aliasEdit!==E) return; E.groups=mergeGroups(E.groups,r.groups,s.lines); E.called=r.called; if(!E.groups.length) E.note="같은 인물로 보이는 다른 표기는 찾지 못했어요."; }
-  catch(e){ if(S.aliasEdit===E) E.note= e&&e.code==="cancelled"? "" : aiErrMsg(e); }
-  finally{ if(S.aliasEdit===E){ E.busy=null; render(); } }
 }
 function applyAliasEdit(s){
   const E=S.aliasEdit; if(!E) return;
@@ -1566,7 +1502,7 @@ function viewEdit(s){
     <div class="label">같은 인물 정리</div>
     ${mergedNow(s).map(g=>`<div class="row small"><b>${esc(g.main)}</b><span class="muted">←</span>${g.aliases.map(a=>`<span class="tag plain">${esc(a)}</span> <button class="ghost" data-act="undoalias" data-a="${esc(a)}" style="min-height:30px;padding:2px 8px">되돌리기</button>`).join("")}</div>`).join("")||'<p class="small muted">합친 이름이 없어요.</p>'}
     ${S.aliasEdit? aliasCard(S.aliasEdit.groups,!!S.aliasEdit.busy,S.aliasEdit.note,"edit",s.lines)+`<div class="row"><button class="primary" data-act="aliasapply" ${S.aliasEdit.busy?"disabled":""}>체크한 이름 합치기</button><button class="ghost" data-act="aliascancel">취소</button></div>`
-      : `<div class="row"><button data-act="aliasfind">같은 인물 찾기</button><span class="small muted">애칭·성 뺀 이름·무대 밖 목소리처럼 표기만 다른 인물을 찾아요.</span></div>`}
+      : `<div class="row"><button data-act="aliasfind">같은 인물 찾기</button><span class="small muted">성 뺀 이름·무대 밖 목소리처럼 표기만 다른 인물을 바로 찾아요. 애칭은 직접 합칠 수 있어요.</span></div>`}
     ${S.confirmDel?`<div class="confirm"><p>"${esc(s.title)}"와 분석·진도·녹음을 모두 지울까요? 되돌릴 수 없어요.</p><div class="row"><button class="ng" data-act="del">지우기</button><button data-act="askdel">취소</button></div></div>`:""}
   </div>`;
 }
@@ -1813,7 +1749,6 @@ app.addEventListener("click", async e=>{
     case "play": { stopSpeech(); const blob=await recs.get(s.id,i); if(blob) playBlob(blob,speakTok); break; }
     case "rec": toggleRecord(s.id,i); break;
     case "settings": stopSpeech(); stopDict(); S.view="settings"; S.run=null; S.set=null; render(); window.scrollTo(0,0); break;
-    case "addaliasai": runAddAliases(); break;
     case "aimode": { const a=aiSettings(); a.mode=b.dataset.mode; saveAISettings(a); S.set={...(S.set||{}),msg:""}; render(); break; }
     case "aicheck": {
       const a=aiSettings(), mode=a.mode, key=(document.getElementById("aiKey").value||"").trim();
