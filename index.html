@@ -287,7 +287,7 @@ const S={
   scripts:[], view:"library", curId:null, tab:"run",
   read:{keys:true, stories:false, hide:false, open:{}, shown:{}},
   add:{title:"", text:"", parsed:null, role:"", err:"", pdf:null, pages:0, from:1, to:1, reading:null, showText:false},
-  run:null, runSec:"all", settings:{rate:1, hint:"none", auto:true},
+  run:null, runSec:"all", settings:{rate:1, hint:"none", auto:true, onlyMine:true},
   storage:"loading", loadNote:"", job:null, edit:false, confirmDel:false, confirmReset:false,
   charSel:null, relSel:null, flashI:null
 };
@@ -1285,6 +1285,8 @@ function startRun(s, weakOnly){
   let seq=[];
   if(weakOnly){
     myIdx(s,sec).filter(i=>status(s,i)!=="ok").forEach(i=>{ let c=i-1; while(c>=a&&!(s.lines[c].k==="line"&&s.lines[c].r!==s.myRole)) c--; if(c>=a&&seq[seq.length-1]!==c) seq.push(c); seq.push(i); });
+  } else if(!sec&&S.settings.onlyMine!==false&&sectionsOf(s).length>1){
+    for(const x of sectionsOf(s)) if(myIdx(s,x).length) for(let i=x.start;i<x.end;i++) if(s.lines[i].k==="line") seq.push(i);
   } else for(let i=a;i<b;i++) if(s.lines[i].k==="line") seq.push(i);
   S.run={seq,pos:0,weakOnly,revealed:false,hint:S.settings.hint,showStory:false,heard:null,listening:false,okN:0,ngN:0,done:!seq.length,sec};
   S.tab="run"; render(); enterStep();
@@ -1511,10 +1513,11 @@ function needAI(s){
   if(!sample) return `<div class="notice">AI 설정을 먼저 확인해 주세요. <button class="ghost" data-act="settings">설정 열기</button></div>`;
   return "";
 }
-function secOptions(s,sel){
-  const secs=sectionsOf(s); if(secs.length<2) return "";
+function secOptions(s,sel,mineOnly){
+  const all=sectionsOf(s); if(all.length<2) return "";
+  const secs=mineOnly? all.filter(x=>myIdx(s,x).length) : all;
   const A=s.analysis;
-  return `<select id="secSel" aria-label="장면 고르기"><option value="all" ${sel==="all"?"selected":""}>작품 전체</option>${secs.map(x=>`<option value="${x.start}" ${String(sel)===String(x.start)?"selected":""}>${A&&A.stages&&A.stages[x.start]?`[${A.stages[x.start]}] `:""}${esc(x.label)}${A&&A.scenes&&A.scenes[x.start]&&A.scenes[x.start].title?` · ${esc(A.scenes[x.start].title)}`:""} (내 대사 ${myIdx(s,x).length})</option>`).join("")}</select>`;
+  return `<select id="secSel" aria-label="장면 고르기"><option value="all" ${sel==="all"?"selected":""}>${mineOnly?"내가 나오는 장면 전체":"작품 전체"}</option>${secs.map(x=>`<option value="${x.start}" ${String(sel)===String(x.start)?"selected":""}>${A&&A.stages&&A.stages[x.start]?`[${A.stages[x.start]}] `:""}${esc(x.label)}${A&&A.scenes&&A.scenes[x.start]&&A.scenes[x.start].title?` · ${esc(A.scenes[x.start].title)}`:""} (내 대사 ${myIdx(s,x).length})</option>`).join("")}</select>`;
 }
 function viewRead(s){
   const R=S.read, has=hasNotes(s), secs=sectionsOf(s);
@@ -1543,7 +1546,8 @@ function viewRun(s){
     const sec=runSection(s), weak=myIdx(s,sec).filter(i=>status(s,i)!=="ok").length, tot=myIdx(s,sec).length;
     const A=s.analysis, sc=sec&&A&&A.scenes?A.scenes[sec.start]:null;
     return `<div class="panel"><h3>리허설</h3>
-      ${sectionsOf(s).length>1?`<label class="label" for="secSel">연습할 장면</label>${secOptions(s,S.runSec)}`:""}
+      ${sectionsOf(s).length>1?`<div class="row" style="margin-bottom:6px"><button class="chip" data-act="onlymine" data-v="1" aria-pressed="${S.settings.onlyMine!==false}">내가 나오는 장면만 (${sectionsOf(s).filter(x=>myIdx(s,x).length).length})</button><button class="chip" data-act="onlymine" data-v="0" aria-pressed="${S.settings.onlyMine===false}">모든 장면 (${sectionsOf(s).length})</button></div>
+      <label class="label" for="secSel">연습할 장면</label>${secOptions(s,S.runSec,S.settings.onlyMine!==false)}`:""}
       ${sc?`<p class="small">${stBadge(A.stages&&A.stages[sec.start])} ${esc(sc.event)}</p>`:""}
       <p class="small muted">상대 대사는 소리로 읽어 주고, 내 차례가 오면 멈춰서 기다려요. 내 대사는 가려져 있고 힌트를 단계별로 열 수 있어요. 이 범위의 내 대사 ${tot}개 중 ${tot-weak}개를 외웠어요.</p>
       ${settings}
@@ -1791,6 +1795,7 @@ app.addEventListener("click", async e=>{
     case "typedone": finishTyping(); break;
     case "typecancel": S.run.typing=false; S.run.typed=""; rerender(); break;
     case "runall": startRun(s,false); break;
+    case "onlymine": { S.settings.onlyMine=b.dataset.v==="1"; saveSettings(); const sec=runSection(s); if(S.settings.onlyMine&&sec&&!myIdx(s,sec).length) S.runSec="all"; rerender(); break; }
     case "runweak": startRun(s,true); break;
     case "runweakall": S.runSec="all"; startRun(s,true); break;
     case "runexit": stopSpeech(); stopDict(); S.run=null; try{S.wake&&S.wake.release();}catch(_){} render(); break;
