@@ -287,7 +287,7 @@ const S={
   scripts:[], view:"library", curId:null, tab:"run",
   read:{keys:true, stories:false, hide:false, open:{}, shown:{}},
   add:{title:"", text:"", parsed:null, role:"", err:"", pdf:null, pages:0, from:1, to:1, reading:null, showText:false},
-  run:null, runSec:"all", settings:{rate:1, hint:"none", auto:true},
+  run:null, runSec:"all", settings:{rate:1, hint:"none", auto:true, autoRec:true},
   storage:"loading", loadNote:"", job:null, edit:false, confirmDel:false, confirmReset:false,
   charSel:null, relSel:null, flashI:null
 };
@@ -1363,8 +1363,8 @@ async function enterStep(){
     if(S.run===R && R.pos===pos){ R.playing=false; if(finished){ await new Promise(r=>setTimeout(r,350)); if(S.run===R&&R.pos===pos) next(); } else render(); }
   }
 }
-function next(){ const R=S.run; if(!R) return; stopSpeech(); stopDict(); R.pos++; R.revealed=false; R.showStory=false; R.heard=null; R.hint=S.settings.hint; if(R.pos>=R.seq.length){ R.done=true; render(); return; } render(); enterStep(); }
-function prev(){ const R=S.run; if(!R||R.pos===0) return; stopSpeech(); stopDict(); R.pos--; R.revealed=false; R.heard=null; R.showStory=false; render(); }
+function next(){ const R=S.run; if(!R) return; stopSpeech(); stopDict(); R.pos++; R.revealed=false; R.showStory=false; R.heard=null; R.typed=""; R.justRec=null; R.hint=S.settings.hint; if(R.pos>=R.seq.length){ R.done=true; render(); return; } render(); enterStep(); }
+function prev(){ const R=S.run; if(!R||R.pos===0) return; stopSpeech(); stopDict(); R.pos--; R.revealed=false; R.heard=null; R.typed=""; R.justRec=null; R.showStory=false; render(); }
 /* device speech recognition (Chrome, Edge, Safari on iPhone) with the same shape the rehearsal code uses */
 function makeDictation(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition; if(!SR) return null;
@@ -1407,17 +1407,46 @@ async function toggleRecord(sid,i){
   recorder={sid,i,mr}; mr.start(); rerender();
 }
 let dictUnsub=[];
-function stopDict(){ if(dict&&S.run&&S.run.listening){ dict.stop().catch(()=>{}); } dictUnsub.forEach(f=>f()); dictUnsub=[]; if(S.run) S.run.listening=false; }
-function startDict(){
-  const R=S.run; if(!dict||!R) return;
-  stopSpeech(); R.heard={text:"",partial:""}; R.listening=true;
-  const p=dict.start({language:"ko"});
+/* auto take: records while I speak my line, saved as that line's recording */
+let autoRec=null;
+async function startAutoRec(sid,i){
+  if(S.settings.autoRec===false||S.noAutoRec||!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder) return false;
+  if(recorder){ try{ recorder.mr.stop(); }catch(e){} }
+  let stream; try{ stream=await navigator.mediaDevices.getUserMedia({audio:true}); }catch(e){ return false; }
+  let mr; try{ mr=new MediaRecorder(stream); }catch(e){ stream.getTracks().forEach(t=>t.stop()); return false; }
+  const chunks=[], me={sid,i,mr,stream};
+  mr.ondataavailable=e=>{ if(e.data&&e.data.size) chunks.push(e.data); };
+  me.done=new Promise(res=>{ mr.onstop=async()=>{ stream.getTracks().forEach(t=>t.stop()); const blob=new Blob(chunks,{type:mr.mimeType||"audio/webm"}); if(blob.size>800&&!me.discard){ await recs.put(sid,i,blob); if(S.run) S.run.justRec=sid+":"+i; } res(); }; });
+  try{ mr.start(); }catch(e){ stream.getTracks().forEach(t=>t.stop()); return false; }
+  autoRec=me; return true;
+}
+async function stopAutoRec(discard){ const r=autoRec; autoRec=null; if(!r) return; if(discard) r.discard=true; try{ if(r.mr.state!=="inactive") r.mr.stop(); }catch(e){} await r.done; }
+function stopDict(){ if(dict&&S.run&&S.run.listening){ dict.stop().catch(()=>{}); } dictUnsub.forEach(f=>f()); dictUnsub=[]; if(S.run){ S.run.listening=false; S.run.typing=false; } if(autoRec) stopAutoRec().then(rerender); }
+async function endSay(){ const R=S.run; dictUnsub.forEach(f=>f()); dictUnsub=[]; if(R){ R.listening=false; R.revealed=true; } await stopAutoRec(); render(); }
+function listenDict(R,retry){
+  let live=false; const p=dict.start({language:"ko"});
   dictUnsub=[ dict.onFinal(({text})=>{ R.heard.text+=text; renderHeard(); }), dict.onPartial(({text})=>{ R.heard.partial=text; renderHeard(); }),
-    dict.onState(({state,reason})=>{ if(state==="idle"){ R.listening=false; if(reason==="not_granted"||reason==="unavailable"){ dict=null; toast("음성 인식을 쓸 수 없어요."); } R.revealed=true; render(); } }) ];
-  p.catch(e=>{ R.listening=false; if(e&&(e.code==="not_granted"||e.code==="unavailable")){ dict=null; toast("이 화면에서는 음성 인식을 쓸 수 없어요."); } render(); });
+    dict.onState(({state,reason})=>{ if(state==="listening") live=true; if(state==="idle"&&R.listening&&live){ if(reason==="not_granted"||reason==="unavailable"){ dict=null; toast("음성 인식을 쓸 수 없어요."); } endSay(); } }) ];
+  p.catch(async e=>{
+    dictUnsub.forEach(f=>f()); dictUnsub=[];
+    if(retry&&autoRec){ await stopAutoRec(true); S.noAutoRec=true; R.recOn=false; toast("이 기기에서는 말하기 확인과 녹음을 함께 할 수 없어서 녹음은 끄고 들을게요."); if(dict&&R.listening){ render(); return listenDict(R,false); } }
+    if(e&&(e.code==="not_granted"||e.code==="unavailable")){ dict=null; toast("이 화면에서는 음성 인식을 쓸 수 없어요."); }
+    if(autoRec){ R.heard={text:"",partial:""}; R.recOnly=true; render(); return; }
+    R.listening=false; render(); });
+}
+async function startDict(){
+  const R=S.run; if(!R) return; const s=cur(); const i=R.seq[R.pos];
+  stopSpeech(); R.typing=false; R.heard={text:"",partial:""}; R.listening=true; R.recOnly=!dict; R.justRec=null; render();
+  const recOn=!s.example&&await startAutoRec(s.id,i);
+  if(S.run!==R||!R.listening){ await stopAutoRec(true); return; }
+  R.recOn=recOn;
+  if(dict) listenDict(R,recOn);
+  else if(!recOn){ R.listening=false; toast("마이크를 쓸 수 없어요. 타이핑으로 확인해 보세요."); }
   render();
 }
-async function finishDict(){ const R=S.run; if(!dict||!R) return; await dict.stop().catch(()=>{}); R.listening=false; R.revealed=true; render(); }
+async function finishDict(){ const R=S.run; if(!R) return; if(dict&&!R.recOnly) await dict.stop().catch(()=>{}); await endSay(); }
+function startTyping(){ const R=S.run; if(!R) return; stopSpeech(); R.typing=true; R.typed=R.typed||""; render(); setTimeout(()=>{ const t=document.getElementById("typeAns"); if(t){ t.focus(); t.setSelectionRange(t.value.length,t.value.length); } },30); }
+function finishTyping(){ const R=S.run; if(!R) return; const t=document.getElementById("typeAns"); const v=((t&&t.value)||R.typed||"").trim(); R.typing=false; R.typed=""; R.heard={text:v,typed:true}; R.revealed=true; render(); }
 function lcs(a,b){ const n=a.length,m=b.length; if(!n||!m) return 0; let prev=new Array(m+1).fill(0); for(let i=1;i<=n;i++){ const c=[0]; for(let j=1;j<=m;j++) c[j]=a[i-1]===b[j-1]?prev[j-1]+1:Math.max(prev[j],c[j-1]); prev=c; } return prev[m]; }
 function compare(orig, spoken){
   const a=norm(orig), b=norm(spoken); const score=a.length? Math.round(lcs(a,b)/a.length*100):0;
@@ -1598,6 +1627,7 @@ function viewRun(s){
   const R=S.run;
   const settings=`<div class="row small">
     <button class="chip" data-act="auto" aria-pressed="${S.settings.auto}">상대 대사 자동 읽기</button>
+    ${!s.example?`<button class="chip" data-act="autorec" aria-pressed="${S.settings.autoRec!==false}">말할 때 자동 녹음</button>`:""}
     <label class="range" for="rate">속도 <input type="range" id="rate" min="0.7" max="1.5" step="0.1" value="${S.settings.rate}"> <span class="score">${S.settings.rate.toFixed(1)}</span></label></div>`;
   if(!R){
     const sec=runSection(s), weak=myIdx(s,sec).filter(i=>status(s,i)!=="ok").length, tot=myIdx(s,sec).length;
@@ -1632,15 +1662,16 @@ function viewRun(s){
       ${!R.revealed?`<div class="row">${hintBtns.map(h=>`<button class="chip" data-act="hint" data-h="${h[0]}" aria-pressed="${R.hint===h[0]}">${h[1]}</button>`).join("")}
         ${note&&note.story?`<button class="chip" data-act="rstory" aria-pressed="${R.showStory}">흐름 힌트</button>`:""}</div>`:""}
       ${(R.showStory||R.revealed)&&note&&note.story?`<div class="story">${boldKeys(note.story,note.keys)}</div>`:""}
-      ${R.listening?`<div class="heard" id="heardLive">${esc((R.heard.text+" "+(R.heard.partial||"")).trim()||"듣고 있어요…")}</div><div class="row"><button class="primary" data-act="dictdone">다 말했어요</button></div>`:""}
-      ${result?`<div class="heard"><div class="small muted">들은 말과 <span class="score">${result.score}%</span> 일치 · 빨간 단어는 빠졌거나 달라요</div>${result.html}</div>`:""}
+      ${R.listening?`<div class="heard" id="heardLive">${R.recOnly?(R.recOn?"● 녹음 중… 대사를 말해 보세요":"준비 중…"):esc((R.heard.text+" "+(R.heard.partial||"")).trim()||"듣고 있어요…")}</div><div class="row">${R.recOn&&!R.recOnly?'<span class="small muted">● 녹음 중</span><span class="grow"></span>':""}<button class="primary" data-act="dictdone">다 말했어요</button></div>`:""}
+      ${R.typing?`<textarea id="typeAns" rows="3" enterkeyhint="done" placeholder="기억나는 대로 대사를 쳐 보세요" style="width:100%;font-family:var(--font-script);font-size:16px">${esc(R.typed||"")}</textarea><div class="row"><button class="ghost" data-act="typecancel">취소</button><span class="grow"></span><button class="primary" data-act="typedone">확인</button></div>`:""}
+      ${result?`<div class="heard"><div class="small muted">${R.heard.typed?"쓴 말":"들은 말"}과 <span class="score">${result.score}%</span> 일치 · 빨간 단어는 빠졌거나 달라요</div>${result.html}</div>`:""}
       <div class="row">
-        ${!R.revealed&&!R.listening&&dict?`<button data-act="dict">말로 확인</button>`:""}
-        ${!R.revealed&&!R.listening?`<button data-act="reveal1">정답 보기</button>`:""}
-        ${!s.example&&recs.has(s.id,i)?`<button data-act="play" data-i="${i}">내 녹음 듣기</button>`:""}${!s.example?recBtn(s,i,true):""}
+        ${!R.revealed&&!R.listening&&!R.typing&&(dict||(!s.example&&S.settings.autoRec!==false&&!S.noAutoRec&&window.MediaRecorder))?`<button data-act="dict">말하기</button>`:""}
+        ${!R.revealed&&!R.listening&&!R.typing?`<button data-act="typing">타이핑</button><button data-act="reveal1">정답 보기</button>`:""}
+        ${!R.listening&&!s.example&&recs.has(s.id,i)?`<button class="${R.justRec===s.id+":"+i?"primary":""}" data-act="play" data-i="${i}">${R.justRec===s.id+":"+i?"▶ 방금 녹음 듣기":"내 녹음 듣기"}</button>`:""}${!R.listening&&!s.example?recBtn(s,i,true):""}
       </div>
       ${mood?`<p class="small muted">이 장면의 ${esc(s.myRole)}: ${esc(mood)}</p>`:""}
-      ${!R.listening?`<div class="bigbtns"><button class="ng" data-act="judge" data-ok="0">틀렸어요</button><button class="ok" data-act="judge" data-ok="1">맞았어요</button></div>`:""}`;
+      ${!R.listening&&!R.typing?`<div class="bigbtns"><button class="ng" data-act="judge" data-ok="0">틀렸어요</button><button class="ok" data-act="judge" data-ok="1">맞았어요</button></div>`:""}`;
   }
   return `<div class="panel stage">
     <div class="row between"><span class="where">${stBadge(st)}<span>${esc(sec&&!sec.whole?sec.label:"")}</span><span class="counter">${R.weakOnly?"못 외운 대사":"처음부터"} · ${R.pos+1} / ${R.seq.length}</span></span><span class="row"><button class="ghost" data-act="prev" ${R.pos?"":"disabled"}>← 이전</button><button class="ghost" data-act="runexit">그만</button></span></div>
@@ -1757,6 +1788,7 @@ app.addEventListener("input", e=>{
   const t=e.target;
   if(t.id==="addTitle") S.add.title=t.value;
   if(t.id==="addText"){ S.add.text=t.value; }
+  if(t.id==="typeAns"&&S.run) S.run.typed=t.value;
   if(t.id==="pFrom") S.add.from=Number(t.value)||1;
   if(t.id==="pTo") S.add.to=Number(t.value)||1;
   if(t.id==="rate"){ S.settings.rate=Number(t.value); saveSettings(); const sp=t.parentElement.querySelector(".score"); if(sp) sp.textContent=S.settings.rate.toFixed(1); try{ tts&&tts.setRate&&tts.setRate(S.settings.rate);}catch(_){} }
@@ -1773,7 +1805,7 @@ app.addEventListener("change", e=>{
   else if(S.aliasEdit){ const g=S.aliasEdit.groups[k]; if(g){ g.on=t.checked; rerender(); } }
 });
 app.addEventListener("toggle", e=>{ if(e.target.id==="textBox") S.add.showText=e.target.open; }, true);
-app.addEventListener("keydown", e=>{ if((e.key==="Enter"||e.key===" ")&&e.target.id==="drop"){ e.preventDefault(); document.getElementById("pdfInput").click(); return; } if((e.key==="Enter"||e.key===" ")&&e.target.dataset&&(e.target.dataset.act==="reveal")){ e.preventDefault(); e.target.click(); } });
+app.addEventListener("keydown", e=>{ if(e.target.id==="typeAns"&&e.key==="Enter"&&!e.shiftKey&&!e.isComposing&&e.keyCode!==229){ e.preventDefault(); finishTyping(); return; } if((e.key==="Enter"||e.key===" ")&&e.target.id==="drop"){ e.preventDefault(); document.getElementById("pdfInput").click(); return; } if((e.key==="Enter"||e.key===" ")&&e.target.dataset&&(e.target.dataset.act==="reveal")){ e.preventDefault(); e.target.click(); } });
 app.addEventListener("dragover", e=>{ const d=e.target.closest&&e.target.closest("#drop"); if(d){ e.preventDefault(); d.classList.add("over"); } });
 app.addEventListener("dragleave", e=>{ const d=e.target.closest&&e.target.closest("#drop"); if(d) d.classList.remove("over"); });
 app.addEventListener("drop", e=>{ const d=e.target.closest&&e.target.closest("#drop"); if(d){ e.preventDefault(); pickFile(e.dataTransfer.files&&e.dataTransfer.files[0]); } });
@@ -1846,6 +1878,10 @@ app.addEventListener("click", async e=>{
     case "askreset": S.confirmReset=!S.confirmReset; rerender(); break;
     case "reset": s.prog={}; s.progResetAt=Date.now(); saveScript(s,0); S.confirmReset=false; render(); toast("진도를 초기화했어요."); break;
     case "auto": S.settings.auto=!S.settings.auto; saveSettings(); rerender(); break;
+    case "autorec": S.settings.autoRec=S.settings.autoRec===false; S.noAutoRec=false; saveSettings(); rerender(); break;
+    case "typing": startTyping(); break;
+    case "typedone": finishTyping(); break;
+    case "typecancel": S.run.typing=false; S.run.typed=""; rerender(); break;
     case "runall": startRun(s,false); break;
     case "runweak": startRun(s,true); break;
     case "runweakall": S.runSec="all"; startRun(s,true); break;
