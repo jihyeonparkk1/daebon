@@ -163,6 +163,8 @@ ul.pts{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px;fo
 .counter{font-variant-numeric:tabular-nums;font-size:13px;color:var(--muted)}
 .bigbtns{display:grid;grid-template-columns:1fr 1fr;gap:8px}
 .bigbtns button{min-height:52px;font-size:16px}
+.listenbtns{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:8px}
+.listenbtns button{min-height:64px;font-size:18px}
 .heard{font-family:var(--font-script);font-size:15px;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .heard .miss{color:var(--ng);font-weight:700}
 .score{font-variant-numeric:tabular-nums;font-weight:700}
@@ -1057,6 +1059,31 @@ const VOICES=["airy","rounded","glassy","buttery"];
 function voiceIdx(s, role){ const rs=rolesOf(s.lines).map(x=>x.r).filter(r=>r!==s.myRole); return Math.max(0,rs.indexOf(role)); }
 function stopSpeech(){ speakTok++; try{ tts&&tts.stop(); }catch(e){} try{ window.speechSynthesis&&speechSynthesis.cancel(); }catch(e){} if(curAudio){ curAudio.pause(); curAudio=null; } }
 async function playBlob(blob,tok){ const url=URL.createObjectURL(blob); curAudio=new Audio(url); curAudio.playbackRate=S.settings.rate; await new Promise(res=>{ curAudio.onended=curAudio.onerror=res; curAudio.play().catch(res); }); URL.revokeObjectURL(url); return tok===speakTok; }
+/* device voices: best Korean voice first, a different voice (or pitch) per character */
+function koVoices(){ try{ return window.speechSynthesis? speechSynthesis.getVoices().filter(v=>/^ko/i.test(v.lang)) : []; }catch(e){ return []; } }
+function voiceScore(v){ const n=v.name||""; return (/Natural|Online|Neural/i.test(n)?100:0)+(/Premium|Enhanced|향상|고품질/i.test(n)?80:0)+(/Google/i.test(n)?40:0)+(v.localService===false?5:0); }
+function rankedVoices(){ return koVoices().sort((a,b)=>voiceScore(b)-voiceScore(a)); }
+const PITCHES=[1,0.82,1.18,0.92,1.1,0.88,1.05];
+function voiceFor(s, role){
+  const vs=rankedVoices(); let base=S.settings.voice? vs.findIndex(v=>v.voiceURI===S.settings.voice) : 0; if(base<0) base=0;
+  if(S.settings.multiVoice===false||role==null) return {voice:vs[base]||null,pitch:1};
+  const k=rolesOf(s.lines).map(x=>x.r).indexOf(role)+1;            // 0 = narrator
+  const pool=vs.filter(v=>voiceScore(v)>=voiceScore(vs[base]||{})-40).slice(0,4); if(vs[base]&&!pool.includes(vs[base])) pool.unshift(vs[base]);
+  if(pool.length<2) return {voice:vs[base]||null,pitch:PITCHES[k%PITCHES.length]};
+  const start=Math.max(0,pool.indexOf(vs[base]));
+  return {voice:pool[(start+k)%pool.length],pitch:PITCHES[Math.floor(k/pool.length)%PITCHES.length]};
+}
+function speechChunks(text){ const out=[]; let cur=""; for(const p of String(text).split(/(?<=[.!?。…~])\s+|\n+/)){ if(!p) continue; if((cur+" "+p).length>160&&cur){ out.push(cur); cur=p; } else cur=cur?cur+" "+p:p; } if(cur) out.push(cur); return out.flatMap(c=>c.length>220?c.match(/.{1,200}(\s|$)|.{1,200}/g):[c]); }
+async function sayText(text, vp, tok){
+  if(!("speechSynthesis" in window)) return false;
+  for(const part of speechChunks(text)){
+    if(tok!==speakTok) return false;
+    await new Promise(res=>{ try{ const u=new SpeechSynthesisUtterance(part); u.lang="ko-KR"; u.rate=S.settings.rate; u.pitch=vp.pitch||1; if(vp.voice) u.voice=vp.voice;
+      let t=setTimeout(res, 2500+part.length*300/S.settings.rate); u.onend=u.onerror=()=>{ clearTimeout(t); res(); }; speechSynthesis.speak(u); }catch(e){ res(); } });
+  }
+  return tok===speakTok;
+}
+async function speakNarr(s,text){ stopSpeech(); const tok=speakTok; return sayText(speechOnly(text)||text, voiceFor(s,null), tok); }
 async function speakLine(s, i){
   stopSpeech(); const tok=speakTok; const l=s.lines[i];
   if(!s.example && recs.has(s.id,i)){ const blob=await recs.get(s.id,i); if(blob&&tok===speakTok) return playBlob(blob,tok); }
@@ -1066,15 +1093,74 @@ async function speakLine(s, i){
     try{ await tts.speak(text.slice(0,1900),{voice:VOICES[vi%VOICES.length], rate:S.settings.rate, language:"ko"}); return tok===speakTok; }
     catch(e){ if(tok!==speakTok) return false; if(["not_granted","unavailable","capability_disabled","not_declared"].includes(e&&e.code)) tts=null; else if(e&&e.code!=="busy"&&e.code!=="rate_limited") return false; }
   }
-  if("speechSynthesis" in window){
-    await new Promise(res=>{ try{ const u=new SpeechSynthesisUtterance(text); u.lang="ko-KR"; u.rate=S.settings.rate; u.pitch=[1,0.8,1.2,0.95][vi%4];
-      const v=speechSynthesis.getVoices().find(v=>/^ko/i.test(v.lang)); if(v) u.voice=v; u.onend=u.onerror=res; speechSynthesis.speak(u);
-      setTimeout(res, 1500+text.length*260/S.settings.rate); }catch(e){res();} });
-    return tok===speakTok;
-  }
+  if("speechSynthesis" in window) return sayText(text, voiceFor(s,l.r), tok);
   return false;
 }
-try{ window.speechSynthesis && speechSynthesis.getVoices(); }catch(e){}
+try{ if(window.speechSynthesis){ speechSynthesis.getVoices(); speechSynthesis.onvoiceschanged=()=>{ if(S.view==="script"&&S.tab==="listen") rerender(); }; } }catch(e){}
+
+/* 듣기: the whole script read aloud, for the car or the bus */
+function listenSeq(s){
+  const secs=sectionsOf(s), sel=S.listenSec||"all", o=S.settings; let ranges;
+  if(sel!=="all"){ const x=secs.find(x=>String(x.start)===String(sel)); ranges=x?[x]:[]; }
+  else ranges=(o.onlyMine!==false&&secs.length>1)? secs.filter(x=>myIdx(s,x).length) : [{start:0,end:s.lines.length}];
+  const seq=[]; for(const x of ranges) for(let i=x.start;i<x.end;i++){ const k=s.lines[i].k; if(k==="line"||k==="act"||k==="scene"||(k==="dir"&&o.readDirs)) seq.push(i); }
+  return seq;
+}
+function listenState(s){
+  let L=S.listen; const seq=listenSeq(s);
+  if(!L||L.sid!==s.id){ let saved=null; try{ saved=JSON.parse(localStorage.getItem("sp-listen-"+s.id)||"null"); }catch(e){}
+    L=S.listen={sid:s.id,seq,pos:0,playing:false,tok:0}; if(saved!=null){ const p=seq.findIndex(i=>i>=saved); L.pos=p<0?0:p; } return L; }
+  if(L.seq.join()!==seq.join()){ const curLine=L.seq[L.pos]; L.seq=seq; const p=seq.findIndex(i=>i>=(curLine||0)); L.pos=p<0?0:p; }
+  return L;
+}
+function listenSave(L){ try{ localStorage.setItem("sp-listen-"+L.sid, JSON.stringify(L.seq[L.pos]??0)); }catch(e){} }
+function listenStop(){ const L=S.listen; if(L&&L.playing){ L.playing=false; L.tok++; stopSpeech(); try{ S.wake&&S.wake.release(); }catch(e){} } }
+async function listenLoop(s){
+  const L=S.listen; if(!L) return; const my=++L.tok;
+  if(!("speechSynthesis" in window)){ L.playing=false; toast("이 브라우저는 소리 내어 읽기를 지원하지 않아요."); rerender(); return; }
+  try{ navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>S.wake=l).catch(()=>{}); }catch(e){}
+  while(L.playing&&L.tok===my&&L.pos<L.seq.length){
+    rerender(); listenSave(L);
+    const i=L.seq[L.pos], l=s.lines[i]; let ok;
+    if(l.k!=="line") ok=await speakNarr(s,l.t);
+    else if(l.r===s.myRole&&S.settings.listenMine==="gap"){ stopSpeech(); const tok=speakTok; const ms=Math.min(20000,1200+speechOnly(l.t).length*200/S.settings.rate); await new Promise(r=>setTimeout(r,ms)); ok=tok===speakTok; }
+    else ok=await speakLine(s,i);
+    if(L.tok!==my) return;
+    if(!ok){ L.playing=false; rerender(); return; }
+    await new Promise(r=>setTimeout(r, l.k==="line"?250:600));
+    if(L.tok!==my||!L.playing) return;
+    L.pos++;
+  }
+  if(L.tok===my&&L.pos>=L.seq.length){ L.playing=false; L.pos=0; listenSave(L); toast("끝까지 다 읽었어요."); try{ S.wake&&S.wake.release(); }catch(e){} rerender(); }
+}
+function listenJump(s,d){ const L=S.listen; if(!L) return; const was=L.playing; L.tok++; stopSpeech(); L.pos=Math.max(0,Math.min(L.seq.length-1,L.pos+d)); listenSave(L); if(was){ L.playing=true; listenLoop(s); } else rerender(); }
+function viewListen(s){
+  const L=listenState(s), o=S.settings, secs=sectionsOf(s), vs=rankedVoices();
+  const i=L.seq[L.pos], l=i!=null?s.lines[i]:null, mine=l&&l.k==="line"&&l.r===s.myRole;
+  const pct=L.seq.length?Math.round(L.pos/L.seq.length*100):0;
+  const now=!l? `<p class="muted">읽을 대사가 없어요.</p>`
+    : l.k==="line"? `<div class="cue${mine?" mine":""}"><span class="who">${esc(l.r)}${mine?" · 내 대사"+(o.listenMine==="gap"?" — 소리 내어 말해 보세요":""):""}</span>${speechHTML(l.t)}</div>`
+    : `<div class="cue"><span class="who">${l.k==="dir"?"지문":"장면"}</span>${esc(l.t)}</div>`;
+  return `<div class="panel stage">
+    <div class="row between"><span class="small muted">${esc(l&&secOfLine(s,i)&&!secOfLine(s,i).whole?secOfLine(s,i).label:"")}</span><span class="counter">${L.seq.length?L.pos+1:0} / ${L.seq.length}</span></div>
+    ${now}
+    <div class="meter"><i style="width:${pct}%"></i></div>
+    <div class="listenbtns"><button data-act="lprev" aria-label="이전 대사">⏮ 이전</button><button class="primary" data-act="lplay">${L.playing?"⏸ 멈춤":"▶ 듣기"}</button><button data-act="lnext" aria-label="다음 대사">다음 ⏭</button></div>
+    <div class="row"><button class="ghost" data-act="lstart">처음부터</button><span class="grow"></span><span class="small muted">화면을 켜 둔 채로 두세요. 화면이 꺼지면 멈출 수 있어요.</span></div>
+  </div>
+  <div class="panel"><h3>듣기 설정</h3>
+    ${secs.length>1?`<div class="row" style="margin-bottom:6px"><button class="chip" data-act="onlymine" data-v="1" aria-pressed="${o.onlyMine!==false}">내가 나오는 장면만</button><button class="chip" data-act="onlymine" data-v="0" aria-pressed="${o.onlyMine===false}">모든 장면</button></div>
+      <label class="label" for="listenSel">들을 범위</label>${secOptions(s,S.listenSec||"all",o.onlyMine!==false).replace('id="secSel"','id="listenSel"')}`:""}
+    <div class="label" style="margin-top:10px">내 대사</div>
+    <div class="row"><button class="chip" data-act="lmine" data-v="read" aria-pressed="${o.listenMine!=="gap"}">같이 읽어 주기</button><button class="chip" data-act="lmine" data-v="gap" aria-pressed="${o.listenMine==="gap"}">비워 두기 (내가 말하기)</button></div>
+    <div class="row" style="margin-top:8px"><button class="chip" data-act="ldirs" aria-pressed="${!!o.readDirs}">지문도 읽기</button><button class="chip" data-act="lmulti" aria-pressed="${o.multiVoice!==false}">인물마다 다른 목소리</button></div>
+    <label class="label" for="voiceSel" style="margin-top:10px">기본 목소리</label>
+    ${vs.length?`<div class="row"><select id="voiceSel" style="flex:1">${vs.map((v,k)=>`<option value="${esc(v.voiceURI)}" ${(o.voice?o.voice===v.voiceURI:k===0)?"selected":""}>${esc(v.name)}${k===0?" (추천)":""}</option>`).join("")}</select><button data-act="vtest">미리 듣기</button></div>
+      <p class="small muted">한국어 목소리 ${vs.length}개. ${vs.length<2?"목소리가 하나뿐이라 인물은 높낮이로 구분해요. ":""}아이폰은 설정 → 손쉬운 사용 → 콘텐츠 말하기 → 음성 → 한국어에서 '향상된 품질' 음성을 내려받으면 더 자연스러워요. PC는 엣지(Edge)에서 열면 자연스러운 음성이 생겨요.</p>`
+      : `<p class="small muted">이 기기에서 한국어 목소리를 찾지 못했어요. 그래도 기본 목소리로 읽어 볼게요.</p>`}
+    <label class="range" for="rate" style="margin-top:8px">속도 <input type="range" id="rate" min="0.7" max="1.5" step="0.1" value="${o.rate}"> <span class="score">${o.rate.toFixed(1)}</span></label>
+  </div>`;
+}
 
 /* =========================================================
    Progress
@@ -1484,14 +1570,14 @@ function secHead(s,x){
   return `<div class="sechead" id="S${x.start}"><div class="t">${stBadge(st)}<span>${esc(x.label)}</span>${sc&&sc.title?`<span class="muted" style="font-weight:500">· ${esc(sc.title)}</span>`:""}${turn?'<span class="tag">전환점</span>':""}</div>${sc&&sc.event?`<div class="ev">${esc(sc.event)}</div>`:""}</div>`;
 }
 function viewScript(s){
-  const tabs=[["run","연습"],["read","대본"],["work","작품 분석"],["chars","인물"],["prog","진도"]];
+  const tabs=[["run","연습"],["listen","듣기"],["read","대본"],["work","작품 분석"],["chars","인물"],["prog","진도"]];
   return `<div class="top"><button class="ghost" data-act="home">← 목록</button>
     <div class="grow"><h2>${esc(s.title||"제목 없음")}</h2><div class="small muted">내 배역 <b>${esc(s.myRole)}</b>${s.example?' · <span class="tag plain">예시</span> 진도는 저장되지 않아요':""}</div></div>
     ${!s.example?`<button class="ghost" data-act="edit">설정</button>`:""}</div>
   ${S.edit&&!s.example?viewEdit(s):""}
   ${jobBar(s)}
   <div class="tabs" role="tablist">${tabs.map(([k,v])=>`<button role="tab" aria-selected="${S.tab===k}" data-act="tab" data-tab="${k}">${v}</button>`).join("")}</div>
-  ${S.tab==="read"?viewRead(s):S.tab==="run"?viewRun(s):S.tab==="work"?viewWork(s):S.tab==="chars"?viewChars(s):viewProg(s)}`;
+  ${S.tab==="read"?viewRead(s):S.tab==="run"?viewRun(s):S.tab==="listen"?viewListen(s):S.tab==="work"?viewWork(s):S.tab==="chars"?viewChars(s):viewProg(s)}`;
 }
 function viewEdit(s){
   const roles=rolesOf(s.lines);
@@ -1710,6 +1796,8 @@ app.addEventListener("input", e=>{
 app.addEventListener("change", e=>{
   const t=e.target;
   if(t.id==="secSel"){ S.runSec=t.value; render(); }
+  if(t.id==="listenSel"){ S.listenSec=t.value; rerender(); }
+  if(t.id==="voiceSel"){ S.settings.voice=t.value; saveSettings(); }
   if(t.id==="jumpSel"&&t.value!=="all"){ const el=document.getElementById("S"+t.value); if(el) el.scrollIntoView({block:"start"}); }
 });
 app.addEventListener("change", e=>{
@@ -1730,7 +1818,7 @@ app.addEventListener("click", async e=>{
   switch(a){
     case "new": S.view="add"; S.add={title:"",text:"",parsed:null,role:"",err:"",pdf:null,pages:0,from:1,to:1,reading:null,showText:false}; render(); break;
     case "restart": S.add={title:"",text:"",parsed:null,role:"",err:"",pdf:null,pages:0,from:1,to:1,reading:null,showText:false}; render(); break;
-    case "home": stopSpeech(); stopDict(); S.view="library"; S.run=null; S.edit=false; S.confirmDel=false; render(); break;
+    case "home": listenStop(); stopSpeech(); stopDict(); S.view="library"; S.run=null; S.edit=false; S.confirmDel=false; render(); break;
     case "open": S.curId=b.dataset.id; S.view="script"; S.tab=b.dataset.id==="__example"?"work":"run"; S.run=null; S.runSec="all"; S.read.open={}; S.read.shown={}; S.edit=false; S.charSel=null; S.relSel=null; render(); window.scrollTo(0,0); break;
     case "cont": S.curId=b.dataset.id; S.view="script"; S.tab="run"; S.run=null; S.runSec="all"; S.edit=false; render(); window.scrollTo(0,0); break;
     case "readpdf": readPdf(); break;
@@ -1745,14 +1833,14 @@ app.addEventListener("click", async e=>{
       S.scripts.push(ns); saveScript(ns,0); S.curId=ns.id; S.view="script"; S.tab="run"; S.runSec="all"; S.run=null; render(); window.scrollTo(0,0);
       toast("저장했어요. 바로 읽고 연습할 수 있어요. 작품 분석이 필요하면 '작품 분석' 탭에서 AI 분석을 누르세요.");
       break; }
-    case "tab": stopSpeech(); stopDict(); S.tab=b.dataset.tab; if(S.tab!=="run") S.run=null; render(); window.scrollTo(0,0); break;
+    case "tab": listenStop(); stopSpeech(); stopDict(); S.tab=b.dataset.tab; if(S.tab!=="run") S.run=null; render(); window.scrollTo(0,0); break;
     case "tg": S.read[b.dataset.k]=!S.read[b.dataset.k]; if(b.dataset.k==="hide") S.read.shown={}; rerender(); break;
     case "reveal": S.read.shown[i]=true; rerender(); break;
     case "story": S.read.open[i]=!S.read.open[i]; rerender(); break;
     case "say": speakLine(s,i); break;
     case "play": { stopSpeech(); const blob=await recs.get(s.id,i); if(blob) playBlob(blob,speakTok); break; }
     case "rec": toggleRecord(s.id,i); break;
-    case "settings": stopSpeech(); stopDict(); S.view="settings"; S.run=null; S.set=null; render(); window.scrollTo(0,0); break;
+    case "settings": listenStop(); stopSpeech(); stopDict(); S.view="settings"; S.run=null; S.set=null; render(); window.scrollTo(0,0); break;
     case "aimode": { const a=aiSettings(); a.mode=b.dataset.mode; saveAISettings(a); S.set={...(S.set||{}),msg:""}; render(); break; }
     case "aicheck": {
       const a=aiSettings(), mode=a.mode, key=(document.getElementById("aiKey").value||"").trim();
@@ -1795,6 +1883,14 @@ app.addEventListener("click", async e=>{
     case "typedone": finishTyping(); break;
     case "typecancel": S.run.typing=false; S.run.typed=""; rerender(); break;
     case "runall": startRun(s,false); break;
+    case "lplay": { const L=listenState(s); if(L.playing) listenStop(); else { if(L.pos>=L.seq.length) L.pos=0; L.playing=true; listenLoop(s); } rerender(); break; }
+    case "lprev": listenJump(s,-1); break;
+    case "lnext": listenJump(s,1); break;
+    case "lstart": { const L=listenState(s); const was=L.playing; L.tok++; stopSpeech(); L.pos=0; listenSave(L); if(was) listenLoop(s); else rerender(); break; }
+    case "lmine": S.settings.listenMine=b.dataset.v; saveSettings(); rerender(); break;
+    case "ldirs": S.settings.readDirs=!S.settings.readDirs; saveSettings(); rerender(); break;
+    case "lmulti": S.settings.multiVoice=S.settings.multiVoice===false; saveSettings(); rerender(); break;
+    case "vtest": speakNarr(s,"안녕하세요. 이 목소리로 대본을 읽어 드릴게요."); break;
     case "onlymine": { S.settings.onlyMine=b.dataset.v==="1"; saveSettings(); const sec=runSection(s); if(S.settings.onlyMine&&sec&&!myIdx(s,sec).length) S.runSec="all"; rerender(); break; }
     case "runweak": startRun(s,true); break;
     case "runweakall": S.runSec="all"; startRun(s,true); break;
